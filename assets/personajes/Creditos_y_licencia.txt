@@ -1,0 +1,19 @@
+Modelos de personajes para "El turno de la sal"
+
+Autor: Quaternius (https://quaternius.com)
+Paquetes: Ultimate Modular Women, Ultimate Modular Men y Pirate Kit
+Licencia: CC0 1.0 Universal (dominio público)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Se pueden usar libremente, también en proyectos comerciales. No es obligatorio
+dar crédito, pero se agradece mencionar a Quaternius.
+
+Origen de los archivos:
+https://github.com/agentkaerf/FreeModels (commit db3df04d1e4714298a09510b26fb6de6645138a2)
+
+Equivalencias:
+Sira_Cendal.gltf        <- Ultimate Modular Women / Adventurer
+Tesa_Brumal.gltf        <- Ultimate Modular Women / Medieval
+Guardia_de_la_Lonja.gltf <- Ultimate Modular Men / Adventurer
+Ivo_Lujan.gltf          <- Ultimate Modular Men / Farmer
+Roque_Beltran.gltf      <- Pirate Kit / Characters_Captain_Barbarossa

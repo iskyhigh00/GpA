@@ -22,6 +22,7 @@ func _run() -> void:
 	await _t8_buttons()
 	await _t9_dodge()
 	await _t10_settings()
+	await _t11_models()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -399,4 +400,63 @@ func _t10_settings() -> void:
 	touch(lv, 5, c, true)
 	touch(lv, 5, c, false)
 	check(not lv.hud.settings_visible and not paused, "«Cerrar» reanuda el juego")
+	await free_level(lv)
+
+
+func _t11_models() -> void:
+	print("11) Modelos de personaje")
+	var lv := await new_level()
+	var pr := lv.player.rig
+	var gr := lv.guard.rig
+	check(pr.is_model and gr.is_model, "Sira y el guardia usan sus modelos glTF")
+	if not (pr.is_model and gr.is_model):
+		await free_level(lv)
+		return
+	var pm := pr as ModelRig
+	var gm := gr as ModelRig
+	for clip in ["Idle", "Walk", "Run", "Sword_Slash", "Roll", "HitRecieve", "HitRecieve_2"]:
+		check(pm.anim.has_animation(clip) and gm.anim.has_animation(clip), "ambos tienen la animación %s" % clip)
+	check(pm.anim.get_animation("Walk").loop_mode == Animation.LOOP_LINEAR, "caminar se repite en bucle")
+	await _frames(10)
+	check(pm.current == "Idle", "quieta: Sira en Idle (%s)" % pm.current)
+	lv.player.sim_move = Vector2(0.0, -1.0)
+	await _frames(40)
+	check(pm.current == "Run", "a toda velocidad: Sira corre (%s)" % pm.current)
+	lv.player.sim_move = Vector2.ZERO
+	await _frames(30)
+	check(pm.current == "Idle", "al soltar el stick vuelve a Idle (%s)" % pm.current)
+	var steps := 0
+	lv.player.sim_move = Vector2(0.0, -1.0)
+	for i in 90:
+		await _frames(1)
+		if pm.step_flag:
+			steps += 1
+	lv.player.sim_move = Vector2.ZERO
+	check(steps >= 3, "el ciclo de carrera marca pasos (%d)" % steps)
+	lv.player.hook_cd = 0.0
+	lv.player.do_hook()
+	await _frames(6)
+	check(pm.current == "Sword_Slash" and pm.holding, "el gancho reproduce el golpe (%s)" % pm.current)
+	await _frames(40)
+	lv.player.dodge_cd = 0.0
+	lv.player.do_dodge()
+	await _frames(4)
+	check(pm.current == "Roll", "la esquiva reproduce la voltereta (%s)" % pm.current)
+	await _frames(40)
+	lv.player.hurt_cd = 0.0
+	lv.player.invuln = 0.0
+	lv.hurt_player(5.0)
+	await _frames(3)
+	check(pm.current == "HitRecieve", "un golpe recibido reproduce la reacción (%s)" % pm.current)
+	await _frames(60)
+	check(pm.current != "HitRecieve" or not pm.anim.is_playing(), "la reacción termina y vuelve a moverse")
+	lv.guard.hits = 1
+	lv.guard.state = Guard.S.STUNNED
+	lv.guard.timer = 1.2
+	await _frames(70)
+	check(gm.current == "HitRecieve" and gm.holding, "guardia aturdido: queda encorvado (%s)" % gm.current)
+	lv.guard.state = Guard.S.DISARMED
+	await _frames(70)
+	check(gm.current == "HitRecieve_2" and gm.holding, "guardia desarmado: se queda vencido (%s)" % gm.current)
+	check(is_instance_valid(gm.hand_r) and is_instance_valid(lv.guard.baton), "el bastón sigue en su mano")
 	await free_level(lv)

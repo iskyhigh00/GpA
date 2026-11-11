@@ -53,10 +53,34 @@ func _ready() -> void:
 	roll_node = Node3D.new()
 	roll_node.position = Vector3(0.0, 0.9, 0.0)
 	body_pivot.add_child(roll_node)
-	rig = Rig.build(Color(0.86, 0.72, 0.62), Color(0.1, 0.24, 0.3), Color(0.1, 0.11, 0.14), Color(0.1, 0.07, 0.06))
+	rig = ModelRig.build_model("res://assets/personajes/Sira_Cendal.gltf", 0.93, 0.93)
+	if rig == null:
+		rig = Rig.build(Color(0.86, 0.72, 0.62), Color(0.1, 0.24, 0.3), Color(0.1, 0.11, 0.14), Color(0.1, 0.07, 0.06))
 	rig.root.position = Vector3(0.0, -0.9, 0.0)
 	roll_node.add_child(rig.root)
-	# Bufanda, bolsa y gancho de inspección en la mano derecha.
+	_add_gear()
+	cam = Camera3D.new()
+	cam.top_level = true
+	cam.fov = 62.0
+	cam.far = 80.0
+	add_child(cam)
+	cam.make_current()
+	body_pivot.rotation.y = facing
+	cam_focus = global_position + Vector3(0.0, 1.5, 0.0)
+
+
+## Gancho de inspección en la mano derecha; la figura provisional suma además bufanda y bolsa.
+func _add_gear() -> void:
+	var metal := Gfx.mat_gloss(Color(0.6, 0.62, 0.68), 0.3)
+	if rig.is_model:
+		# En el hueso de la muñeca, +Y apunta por la mano y -X hacia delante (medido en el modelo).
+		var shaft := Gfx.box_m(Vector3(0.8, 0.05, 0.05), metal)
+		shaft.position = Vector3(-0.3, 0.07, 0.0)
+		rig.arm_r.add_child(shaft)
+		var hook_b := Gfx.box_m(Vector3(0.05, 0.22, 0.05), metal)
+		hook_b.position = Vector3(-0.7, 0.17, 0.0)
+		rig.arm_r.add_child(hook_b)
+		return
 	var scarf := Gfx.cyl_m(0.2, 0.12, Gfx.mat_cloth(Color(0.8, 0.6, 0.2)))
 	scarf.position = Vector3(0.0, 0.86, 0.0)
 	rig.body.add_child(scarf)
@@ -67,24 +91,21 @@ func _ready() -> void:
 	var bag := Gfx.box_m(Vector3(0.3, 0.26, 0.14), Gfx.mat_wood())
 	bag.position = Vector3(-0.26, -0.05, 0.22)
 	rig.hips.add_child(bag)
-	var metal := Gfx.mat_gloss(Color(0.6, 0.62, 0.68), 0.3)
-	var shaft := Gfx.box_m(Vector3(0.05, 0.05, 0.75), metal)
-	shaft.position = Vector3(0.0, -0.62, -0.3)
-	rig.arm_r.add_child(shaft)
+	var shaft2 := Gfx.box_m(Vector3(0.05, 0.05, 0.75), metal)
+	shaft2.position = Vector3(0.0, -0.62, -0.3)
+	rig.arm_r.add_child(shaft2)
 	var hook_a := Gfx.box_m(Vector3(0.05, 0.05, 0.22), metal)
 	hook_a.position = Vector3(0.0, -0.62, -0.7)
 	rig.arm_r.add_child(hook_a)
-	var hook_b := Gfx.box_m(Vector3(0.05, 0.2, 0.05), metal)
-	hook_b.position = Vector3(0.0, -0.52, -0.8)
-	rig.arm_r.add_child(hook_b)
-	cam = Camera3D.new()
-	cam.top_level = true
-	cam.fov = 62.0
-	cam.far = 80.0
-	add_child(cam)
-	cam.make_current()
-	body_pivot.rotation.y = facing
-	cam_focus = global_position + Vector3(0.0, 1.5, 0.0)
+	var hook_b2 := Gfx.box_m(Vector3(0.05, 0.2, 0.05), metal)
+	hook_b2.position = Vector3(0.0, -0.52, -0.8)
+	rig.arm_r.add_child(hook_b2)
+
+
+## Reacción al recibir un golpe (solo con modelo animado).
+func flinch() -> void:
+	if swing_t <= 0.0 and dodge_t <= 0.0:
+		rig.oneshot("HitRecieve", 0.0, 1.5)
 
 
 func forward() -> Vector3:
@@ -195,6 +216,9 @@ func _physics_process(delta: float) -> void:
 
 func _animate(delta: float) -> void:
 	var hs := Vector2(velocity.x, velocity.z).length()
+	if rig.is_model:
+		_animate_model(delta, hs)
+		return
 	rig.locomotion(delta, hs, SPEED)
 	if rig.step_flag and is_on_floor() and dodge_t <= 0.0:
 		level.play("step", -16.0)
@@ -209,6 +233,18 @@ func _animate(delta: float) -> void:
 		rig.arm_r.rotation.x = 1.4
 	else:
 		roll_node.rotation.x = 0.0
+
+
+func _animate_model(delta: float, hs: float) -> void:
+	roll_node.rotation.x = 0.0
+	if dodge_t > 0.0:
+		rig.scrub("Roll", 1.0 - dodge_t / DODGE_TIME)
+	elif swing_t > 0.0:
+		rig.scrub("Sword_Slash", lerpf(0.15, 0.75, 1.0 - swing_t / SWING_TIME))
+	else:
+		rig.locomotion(delta, hs, SPEED)
+		if rig.step_flag and is_on_floor():
+			level.play("step", -16.0)
 
 
 func _process(delta: float) -> void:

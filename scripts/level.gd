@@ -705,6 +705,7 @@ func hurt_player(dmg: float) -> void:
 		return
 	player.hurt_cd = 0.8
 	player.add_shake(0.35)
+	player.flinch()
 	hud.flash = 1.0
 	play("hit")
 	spend(dmg)

@@ -24,3 +24,6 @@ El APK lo compila GitHub Actions (`.github/workflows/android.yml`) en cada push 
    godot --headless --path . --import
    godot --headless --path . --fixed-fps 60 --script res://test/run_demo_tests.gd
    ```
+
+## Personajes
+Sira y el guardia usan modelos 3D de Quaternius (CC0) con sus animaciones, en `assets/personajes/` (crédito y licencia en `Creditos_y_licencia.txt`). Tesa, Ivo y Roque ya están importados para los siguientes capítulos. Si un modelo no carga, el juego usa la figura provisional hecha por código (`scripts/rig.gd`). La integración está en `scripts/model_rig.gd`.

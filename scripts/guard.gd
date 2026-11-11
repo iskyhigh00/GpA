@@ -44,6 +44,7 @@ var last_seen := Vector3.ZERO
 var knock := Vector3.ZERO
 var visual: Node3D
 var rig: Rig
+var last_state: S = S.PATROL
 var baton: MeshInstance3D
 var baton_mat: StandardMaterial3D
 var dropped: MeshInstance3D
@@ -65,22 +66,37 @@ func _ready() -> void:
 	add_child(cs)
 	visual = Node3D.new()
 	add_child(visual)
-	rig = Rig.build(Color(0.8, 0.64, 0.55), Color(0.2, 0.24, 0.2), Color(0.12, 0.13, 0.13), Color(0.08, 0.08, 0.08), true)
+	rig = ModelRig.build_model("res://assets/personajes/Guardia_de_la_Lonja.gltf", 1.0, 1.08)
+	if rig == null:
+		rig = Rig.build(Color(0.8, 0.64, 0.55), Color(0.2, 0.24, 0.2), Color(0.12, 0.13, 0.13), Color(0.08, 0.08, 0.08), true)
 	visual.add_child(rig.root)
-	var helmet := Gfx.sphere_m(0.23, Gfx.mat_gloss(Color(0.12, 0.14, 0.17), 0.35))
-	helmet.position = Vector3(0.0, 0.2, 0.02)
-	helmet.scale = Vector3(1.0, 0.8, 1.0)
-	rig.head.add_child(helmet)
-	var brim := Gfx.box_m(Vector3(0.5, 0.04, 0.4), Gfx.mat_gloss(Color(0.12, 0.14, 0.17), 0.35))
-	brim.position = Vector3(0.0, 0.12, -0.08)
-	rig.head.add_child(brim)
-	for sx in [-0.2, 0.2]:
-		var stripe := Gfx.box_m(Vector3(0.06, 0.5, 0.52), Gfx.mat_glow(Color(0.9, 0.75, 0.2), 0.6))
-		stripe.position = Vector3(sx, 0.4, 0.0)
-		rig.body.add_child(stripe)
+	var cap_mat := Gfx.mat_gloss(Color(0.12, 0.14, 0.17), 0.35)
 	baton_mat = Gfx.mat_glow(Color(0.9, 0.5, 0.15), 0.2).duplicate() as StandardMaterial3D
-	baton = Gfx.box_m(Vector3(0.09, 0.09, 0.85), baton_mat)
-	baton.position = Vector3(0.0, -0.62, -0.38)
+	if rig.is_model:
+		# Huesos del modelo: en la cabeza Y sube y Z mira al frente; en la muñeca -X apunta hacia delante.
+		var helmet_m := Gfx.sphere_m(0.15, cap_mat)
+		helmet_m.position = Vector3(0.0, 0.2, -0.01)
+		helmet_m.scale = Vector3(1.0, 0.85, 1.1)
+		rig.head.add_child(helmet_m)
+		var brim_m := Gfx.box_m(Vector3(0.26, 0.025, 0.2), cap_mat)
+		brim_m.position = Vector3(0.0, 0.14, 0.12)
+		rig.head.add_child(brim_m)
+		baton = Gfx.box_m(Vector3(0.85, 0.09, 0.09), baton_mat)
+		baton.position = Vector3(-0.34, 0.07, 0.0)
+	else:
+		var helmet := Gfx.sphere_m(0.23, cap_mat)
+		helmet.position = Vector3(0.0, 0.2, 0.02)
+		helmet.scale = Vector3(1.0, 0.8, 1.0)
+		rig.head.add_child(helmet)
+		var brim := Gfx.box_m(Vector3(0.5, 0.04, 0.4), cap_mat)
+		brim.position = Vector3(0.0, 0.12, -0.08)
+		rig.head.add_child(brim)
+		for sx in [-0.2, 0.2]:
+			var stripe := Gfx.box_m(Vector3(0.06, 0.5, 0.52), Gfx.mat_glow(Color(0.9, 0.75, 0.2), 0.6))
+			stripe.position = Vector3(sx, 0.4, 0.0)
+			rig.body.add_child(stripe)
+		baton = Gfx.box_m(Vector3(0.09, 0.09, 0.85), baton_mat)
+		baton.position = Vector3(0.0, -0.62, -0.38)
 	rig.arm_r.add_child(baton)
 	lantern = OmniLight3D.new()
 	lantern.position = Vector3(0.0, 1.5, -0.4)
@@ -127,6 +143,8 @@ func reset() -> void:
 	ring.visible = false
 	baton_mat.emission_energy_multiplier = 0.2
 	visual.rotation.y = yaw
+	last_state = S.PATROL
+	rig.reset_pose()
 
 
 func can_be_hit() -> bool:
@@ -315,6 +333,7 @@ func _windup(pp: Vector3, delta: float) -> void:
 		return
 	baton_mat.emission_energy_multiplier = 0.2
 	ring.visible = false
+	rig.oneshot("Sword_Slash", 0.45, 1.8)
 	var d := _flat_to(pp).length()
 	state = S.CHASE
 	if slam:
@@ -340,6 +359,9 @@ func _strike(dmg: float) -> void:
 
 func _animate(delta: float) -> void:
 	var hs := Vector2(velocity.x, velocity.z).length()
+	if rig.is_model:
+		_animate_model(delta, hs)
+		return
 	rig.locomotion(delta, hs, CHASE_SPEED)
 	match state:
 		S.WINDUP:
@@ -360,6 +382,29 @@ func _animate(delta: float) -> void:
 			rig.body.rotation.x = -0.18
 		_:
 			pass
+
+
+func _animate_model(delta: float, hs: float) -> void:
+	if state != last_state:
+		match state:
+			S.STUNNED:
+				rig.oneshot("HitRecieve", 0.0, 1.0)
+			S.DISARMED:
+				rig.oneshot("HitRecieve_2", 0.0, 0.9)
+		last_state = state
+	match state:
+		S.WINDUP:
+			var total := 0.9 if slam else 0.45
+			rig.scrub("Sword_Slash", lerpf(0.0, 0.45, 1.0 - clampf(timer / total, 0.0, 1.0)))
+		S.BLOCK:
+			rig.scrub("Sword_Slash", 0.3)
+		S.STUNNED, S.DISARMED:
+			if rig.lock_t > 0.0:
+				rig.locomotion(delta, 0.0, CHASE_SPEED)
+			else:
+				rig.scrub("HitRecieve" if state == S.STUNNED else "HitRecieve_2", 0.98)
+		_:
+			rig.locomotion(delta, hs, CHASE_SPEED)
 
 
 func _patrol(delta: float) -> void:

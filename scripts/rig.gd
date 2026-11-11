@@ -15,6 +15,22 @@ var weapon_mat: StandardMaterial3D
 var phase := 0.0
 var t := 0.0
 var step_flag := false
+## true en ModelRig (modelo glTF con animaciones); false en esta figura procedural.
+var is_model := false
+var lock_t := 0.0
+
+
+## Solo los modelos con animaciones los usan; en la figura procedural no hacen nada.
+func scrub(_clip: String, _u: float) -> void:
+	pass
+
+
+func oneshot(_clip: String, _u0: float = 0.0, _speed: float = 1.0) -> void:
+	pass
+
+
+func reset_pose() -> void:
+	lock_t = 0.0
 
 
 ## «heavy» = más ancho (guardia). Origen en los pies, mira hacia -Z.
