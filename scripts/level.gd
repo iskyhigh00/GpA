@@ -123,7 +123,7 @@ func _build_environment() -> void:
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.07, 0.11, 0.14)
 	env.fog_density = 0.022
-	env.glow_enabled = true
+	env.glow_enabled = false
 	env.glow_intensity = 0.6
 	env.glow_bloom = 0.04
 	env.adjustment_enabled = true
@@ -137,8 +137,8 @@ func _build_environment() -> void:
 	moon.light_color = Color(0.55, 0.68, 0.95)
 	moon.light_energy = 0.7
 	moon.shadow_enabled = true
-	moon.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	moon.directional_shadow_max_distance = 38.0
+	moon.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	moon.directional_shadow_max_distance = 26.0
 	add_child(moon)
 	var warm := OmniLight3D.new()
 	warm.position = Vector3(-10.0, 2.8, 0.0)
@@ -367,7 +367,7 @@ func _build_particles() -> void:
 	quad.size = Vector2(0.05, 0.05)
 	quad.material = qm
 	var dust := GPUParticles3D.new()
-	dust.amount = 90
+	dust.amount = 40
 	dust.lifetime = 9.0
 	dust.preprocess = 9.0
 	dust.visibility_aabb = AABB(Vector3(-16.0, -2.0, -12.0), Vector3(32.0, 8.0, 24.0))
@@ -392,7 +392,7 @@ func _build_particles() -> void:
 	sq.size = Vector2(0.9, 0.9)
 	sq.material = sm
 	var mist := GPUParticles3D.new()
-	mist.amount = 36
+	mist.amount = 14
 	mist.lifetime = 12.0
 	mist.preprocess = 12.0
 	mist.visibility_aabb = AABB(Vector3(-16.0, -1.0, -12.0), Vector3(32.0, 4.0, 24.0))
@@ -419,7 +419,7 @@ func _build_particles() -> void:
 	mist.position = Vector3(9.0, 0.5, 0.0)
 	add_child(mist)
 	grate_steam = GPUParticles3D.new()
-	grate_steam.amount = 24
+	grate_steam.amount = 12
 	grate_steam.lifetime = 3.0
 	grate_steam.emitting = false
 	grate_steam.visibility_aabb = AABB(Vector3(-3.0, -2.0, -3.0), Vector3(6.0, 8.0, 6.0))

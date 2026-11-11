@@ -256,7 +256,6 @@ func _text(pos: Vector2, s: String, size: int, col: Color, align: HorizontalAlig
 func _draw_ui() -> void:
 	var vs := view_size()
 	canvas.draw_texture_rect(vignette, Rect2(Vector2.ZERO, vs), false)
-	_text(Vector2(vs.x - 150.0, 100.0), "%d FPS" % int(Engine.get_frames_per_second()), 16, Color(0.7, 0.9, 0.7, 0.8), HORIZONTAL_ALIGNMENT_RIGHT, 110.0)
 	_draw_bar()
 	_draw_texts(vs)
 	_draw_controls(vs)
