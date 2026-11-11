@@ -1,0 +1,18 @@
+El turno de la sal | Texturas de Poly Haven
+
+Licencia CC0. https://polyhaven.com/license
+
+Cada material contiene tres JPG originales de Poly Haven.
+Diffuse corresponde a Albedo.
+Normal (GL) corresponde a Normal.
+ARM corresponde a un mapa combinado con oclusión ambiental en rojo, rugosidad en verde y metalizado en azul.
+En Godot se puede asignar ARM al mapa ORM de un ORMMaterial3D.
+
+Materiales
+
+- weathered_planks (1K) · Puestos, cajones y pasarelas. https://polyhaven.com/a/weathered_planks
+- rusty_metal_sheet (1K) · Carro de hielo y compuertas. https://polyhaven.com/a/rusty_metal_sheet
+- rough_plaster_broken (1K) · Interior del consultorio. https://polyhaven.com/a/rough_plaster_broken
+- rock_3 (1K) · Acantilado y cantera. https://polyhaven.com/a/rock_3
+- cobblestone_floor_001 (1K) · Calles exteriores. https://polyhaven.com/a/cobblestone_floor_001
+- metal_plate (1K) · Plataformas de El Telar. https://polyhaven.com/a/metal_plate

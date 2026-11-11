@@ -266,12 +266,12 @@ func _arch(x: float, z0: float) -> void:
 
 func _column(x: float, z: float) -> void:
 	var st := Gfx.mat_stone()
-	var b := Gfx.solid_m(self, Vector3(x, 1.4, z), Vector3(0.7, 2.8, 0.7), st, 2)
+	var b := Gfx.solid_m(self, Vector3(x, 1.4, z), Vector3(0.7, 2.8, 0.7), Gfx.mat_rock(), 2)
 	b.get_child(1).queue_free()
 	var base := Gfx.box_m(Vector3(1.0, 0.3, 1.0), st)
 	base.position = Vector3(0.0, -1.25, 0.0)
 	b.add_child(base)
-	var shaft := Gfx.cyl_m(0.3, 2.3, st, 0.34)
+	var shaft := Gfx.cyl_m(0.3, 2.3, Gfx.mat_rock(), 0.34)
 	shaft.position = Vector3(0.0, 0.0, 0.0)
 	b.add_child(shaft)
 	var cap := Gfx.box_m(Vector3(0.9, 0.32, 0.9), st)
@@ -337,16 +337,6 @@ func _build_gothic() -> void:
 		var bt := Gfx.box_m(Vector3(t.z, 0.35, 0.2), trim)
 		bt.position = Vector3(t.x, 0.18, t.y)
 		add_child(bt)
-	for i in 15:
-		var seam := Gfx.box_m(Vector3(0.04, 0.012, 20.0), trim)
-		seam.position = Vector3(-4.0 + i * 2.0, 0.008, 0.0)
-		Gfx.no_shadow(seam)
-		add_child(seam)
-	for j in 9:
-		var seam2 := Gfx.box_m(Vector3(28.0, 0.012, 0.04), trim)
-		seam2.position = Vector3(9.0, 0.008, -8.0 + j * 2.0)
-		Gfx.no_shadow(seam2)
-		add_child(seam2)
 	# Cuerdas enrolladas, bolardos y cadenas.
 	for rp in [Vector3(21.2, 0.12, 7.5), Vector3(-3.5, 0.12, 9.2)]:
 		var rope := Gfx.torus_m(0.12, 0.42, Gfx.mat_cloth(Color(0.35, 0.27, 0.15)))
@@ -498,7 +488,7 @@ func _build_world() -> void:
 	_wall(DIVIDER_X, 9.0, 0.4, 2.0)
 	# Pilastras en el muro norte y este (no estorban las rutas).
 	for x in [-2.0, 3.0, 13.0, 19.0]:
-		Gfx.solid_m(self, Vector3(x, 1.6, -9.75), Vector3(0.7, 3.2, 0.5), Gfx.mat_rust(), 1)
+		Gfx.solid_m(self, Vector3(x, 1.6, -9.75), Vector3(0.7, 3.2, 0.5), Gfx.mat_rock(), 1)
 	# Puerta del consultorio.
 	door_body = StaticBody3D.new()
 	door_body.position = Vector3(DOOR_X, 1.5, 0.0)
@@ -564,7 +554,7 @@ func _build_world() -> void:
 		kit.add_child(cross)
 		kit_cross.append(cross)
 	# Contrapeso y rejilla.
-	Gfx.solid_m(self, Vector3(19.7, 1.0, 0.0), Vector3(0.5, 2.0, 1.4), Gfx.mat_rust(), 2)
+	Gfx.solid_m(self, Vector3(19.7, 1.0, 0.0), Vector3(0.5, 2.0, 1.4), Gfx.mat_plate(), 2)
 	var pit := Gfx.box_m(Vector3(2.0, 0.1, 2.0), Gfx.mat_cloth(Color(0.0, 0.0, 0.0)))
 	pit.position = GRATE_CENTER + Vector3(0.0, -1.5, 0.0)
 	add_child(pit)
@@ -581,7 +571,7 @@ func _build_world() -> void:
 	gs.size = Vector3(2.0, 0.1, 2.0)
 	grate_shape.shape = gs
 	grate_plate.add_child(grate_shape)
-	grate_plate.add_child(Gfx.box_m(Vector3(2.0, 0.1, 2.0), Gfx.mat_rust()))
+	grate_plate.add_child(Gfx.box_m(Vector3(2.0, 0.1, 2.0), Gfx.mat_plate()))
 	for i in 5:
 		var bar := Gfx.box_m(Vector3(0.08, 0.06, 2.0), Gfx.mat_gloss(Color(0.12, 0.12, 0.13), 0.4))
 		bar.position = Vector3(-0.8 + i * 0.4, 0.06, 0.0)

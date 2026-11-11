@@ -172,24 +172,69 @@ static func _tri(key: String, seed_v: int, c0: Color, c1: Color, rough: float, m
 	return m
 
 
-static func mat_rust() -> StandardMaterial3D:
-	return _tri("rust", 3, Color(0.12, 0.07, 0.05), Color(0.5, 0.27, 0.12), 0.55, 0.6, 0.012, 0.35)
+## Material PBR real (Poly Haven, CC0): color + normal GL + ARM (AO, rugosidad, metal) en triplanar.
+static func _pbr(key: String, folder: String, base: String, res: String, scale_f: float, metal: float) -> BaseMaterial3D:
+	if _mats.has(key):
+		return _mats[key]
+	var root := "res://assets/texturas/%s/%s_" % [folder, base]
+	var diff := root + "diff_" + res + ".jpg"
+	if not ResourceLoader.exists(diff):
+		return null
+	var m := ORMMaterial3D.new()
+	m.albedo_texture = load(diff)
+	m.normal_enabled = true
+	m.normal_texture = load(root + "nor_gl_" + res + ".jpg")
+	m.normal_scale = 1.0
+	m.orm_texture = load(root + "arm_" + res + ".jpg")
+	m.ao_enabled = true
+	m.ao_light_affect = 0.7
+	m.roughness = 1.0
+	m.metallic = metal
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE * scale_f
+	_mats[key] = m
+	return m
 
 
-static func mat_stone() -> StandardMaterial3D:
-	return _tri("stone", 5, Color(0.1, 0.13, 0.15), Color(0.34, 0.4, 0.42), 0.35, 0.0, 0.01, 0.3)
+static func mat_rust() -> BaseMaterial3D:
+	var m := _pbr("rust", "rusty_metal_sheet", "rusty_metal_sheet", "1k", 0.5, 0.2)
+	return m if m else _tri("rust", 3, Color(0.12, 0.07, 0.05), Color(0.5, 0.27, 0.12), 0.55, 0.6, 0.012, 0.35)
 
 
-static func mat_floor() -> StandardMaterial3D:
-	return _tri("floor", 8, Color(0.05, 0.07, 0.09), Color(0.22, 0.27, 0.3), 0.22, 0.1, 0.008, 0.22)
+static func mat_stone() -> BaseMaterial3D:
+	var m := _pbr("stone", "rock_wall_08", "rock_wall_08", "2k", 0.3, 0.0)
+	return m if m else _tri("stone", 5, Color(0.1, 0.13, 0.15), Color(0.34, 0.4, 0.42), 0.35, 0.0, 0.01, 0.3)
 
 
-static func mat_wood() -> StandardMaterial3D:
-	return _tri("wood", 12, Color(0.12, 0.07, 0.04), Color(0.38, 0.23, 0.12), 0.8, 0.0, 0.03, 0.5)
+static func mat_floor() -> BaseMaterial3D:
+	var m := _pbr("floor", "stone_tiles", "stone_tiles", "2k", 0.28, 0.0)
+	return m if m else _tri("floor", 8, Color(0.05, 0.07, 0.09), Color(0.22, 0.27, 0.3), 0.22, 0.1, 0.008, 0.22)
 
 
-static func mat_plaster() -> StandardMaterial3D:
-	return _tri("plaster", 14, Color(0.3, 0.3, 0.27), Color(0.58, 0.56, 0.5), 0.9, 0.0, 0.02, 0.3)
+static func mat_wood() -> BaseMaterial3D:
+	var m := _pbr("wood", "weathered_planks", "weathered_planks", "1k", 0.6, 0.0)
+	return m if m else _tri("wood", 12, Color(0.12, 0.07, 0.04), Color(0.38, 0.23, 0.12), 0.8, 0.0, 0.03, 0.5)
+
+
+static func mat_plaster() -> BaseMaterial3D:
+	var m := _pbr("plaster", "rough_plaster_broken", "rough_plaster_broken", "1k", 0.4, 0.0)
+	return m if m else _tri("plaster", 14, Color(0.3, 0.3, 0.27), Color(0.58, 0.56, 0.5), 0.9, 0.0, 0.02, 0.3)
+
+
+static func mat_plate() -> BaseMaterial3D:
+	var m := _pbr("plate", "metal_plate", "metal_plate", "1k", 0.8, 0.12)
+	return m if m else mat_rust()
+
+
+static func mat_cobble() -> BaseMaterial3D:
+	var m := _pbr("cobble", "cobblestone_floor_001", "cobblestone_floor_001", "1k", 0.5, 0.0)
+	return m if m else mat_floor()
+
+
+static func mat_rock() -> BaseMaterial3D:
+	var m := _pbr("rock", "rock_3", "rock_3", "1k", 0.4, 0.0)
+	return m if m else mat_stone()
 
 
 static func mat_cloth(c: Color) -> StandardMaterial3D:

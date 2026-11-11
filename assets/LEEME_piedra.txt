@@ -1,0 +1,14 @@
+El turno de la sal | Texturas de Poly Haven
+
+Licencia CC0. https://polyhaven.com/license
+
+Cada material contiene tres JPG originales de Poly Haven.
+Diffuse corresponde a Albedo.
+Normal (GL) corresponde a Normal.
+ARM corresponde a un mapa combinado con oclusión ambiental en rojo, rugosidad en verde y metalizado en azul.
+En Godot se puede asignar ARM al mapa ORM de un ORMMaterial3D.
+
+Materiales
+
+- stone_tiles (2K) · Piso principal de la lonja. https://polyhaven.com/a/stone_tiles
+- rock_wall_08 (2K) · Muros y arcos de la lonja. https://polyhaven.com/a/rock_wall_08

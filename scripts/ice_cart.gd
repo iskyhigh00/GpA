@@ -19,7 +19,7 @@ var crust: MeshInstance3D
 
 
 func _ready() -> void:
-	body = Gfx.prop_box(self, Vector3(0.0, 0.7, 0.0), Vector3(2.0, 0.9, 1.1), Color(0.45, 0.5, 0.55))
+	body = Gfx.solid_m(self, Vector3(0.0, 0.7, 0.0), Vector3(2.0, 0.9, 1.1), Gfx.mat_plate(), 2)
 	for i in 3:
 		var ice := Gfx.box_mesh(Vector3(0.55, 0.45, 0.8), Color(0.7, 0.9, 1.0), 0.2)
 		ice.position = Vector3(-0.65 + i * 0.65, 0.58, 0.0)
