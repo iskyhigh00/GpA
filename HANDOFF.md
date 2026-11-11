@@ -23,20 +23,14 @@ godot --headless --fixed-fps 60 -s test/run_demo_tests.gd
 ```
 Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot estaba en `/home/claude/tools/godot/Godot_v4.3-stable_linux.x86_64`; en otro entorno puede no estar.
 
+## Hecho tras este traspaso
+- Lector de folios en `hud.gd` (`open_docs`/`close_docs`, `<` `>` `Cerrar`, tecla ACCIÓN o Esc cierra, pausa el árbol) y papeles sobre la mesa del consultorio (`DESK_POS` en `level.gd`; ACCIÓN cerca de la mesa abre «orden» y «dispensario»).
+- Sección 12 de las pruebas (123 comprobaciones, 0 fallos). Verificado con render que el texto cabe.
+
 ## Pendiente
-1. **Lector de folios** en `hud.gd`:
-   - Variables `doc_visible`, `doc_list`, `doc_page`; señal `docs_toggled(open)`.
-   - `open_docs(list, page)` / `close_docs()` pausan el árbol y limpian toques, como `set_settings`.
-   - Panel `Rect2(vs.x*0.5-540, 36, 1080, vs.y-72)`, papel `Color(0.86,0.82,0.7)`, tinta `Color(0.1,0.09,0.08)`. Título tamaño 30; cuerpo desde 24 y se reduce hasta 15 para que quepa. Botones "<", ">" y "Cerrar" con toque manual en `_press`.
-2. **Interacción en `level.gd`**:
-   - `const DESK_POS := Vector3(-13.5, 0.0, 2.8)` (mesa del consultorio).
-   - Papeles sobre la mesa.
-   - En `do_action`: si `flat_dist(p, DESK_POS) < 2.4` → `hud.open_docs(Docs.get_docs(["orden","dispensario"]))`.
-   - Prompt "ACCIÓN: leer los folios de la mesa" en `_update_prompts()`.
-3. **Tests nuevos** (sección 12): datos de Docs; abrir/siguiente/anterior/cerrar y pausa; prompt visible cerca de la mesa; la escena de título carga la textura y `start_game()` lleva a Main.
-4. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
-5. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.
-6. Sonidos y música: Richi puede traerlos desde otras IA; integrarlos cuando lleguen.
+1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
+2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.
+3. Sonidos y música: Richi puede traerlos desde otras IA; integrarlos cuando lleguen.
 
 ## Avisos
 - Nada visual se verificó con render (solo headless). La posición del bastón, el gancho y el casco en manos y cabeza puede necesitar ajuste.

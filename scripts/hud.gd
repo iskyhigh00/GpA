@@ -10,6 +10,7 @@ signal action_pressed
 signal ampoule_pressed
 signal restart_pressed
 signal settings_toggled(open: bool)
+signal docs_toggled(open: bool)
 signal update_pressed
 signal browser_pressed
 signal play_again_pressed
@@ -47,6 +48,9 @@ var end_lines: Array[String] = []
 var time := 0.0
 var vignette: GradientTexture2D
 var settings_visible := false
+var doc_visible := false
+var doc_list: Array[Dictionary] = []
+var doc_page := 0
 var version_text := "dev"
 var updater: Updater
 
@@ -111,6 +115,43 @@ func settings_rect(which: String) -> Rect2:
 	return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 134.0, 400.0, 44.0)
 
 
+func doc_panel() -> Rect2:
+	var vs := view_size()
+	return Rect2(vs.x * 0.5 - 540.0, 36.0, 1080.0, vs.y - 72.0)
+
+
+func doc_button(which: String) -> Rect2:
+	var pr := doc_panel()
+	var y := pr.end.y - 64.0
+	match which:
+		"prev":
+			return Rect2(pr.position.x + 24.0, y, 96.0, 48.0)
+		"next":
+			return Rect2(pr.position.x + 132.0, y, 96.0, 48.0)
+		_:
+			return Rect2(pr.end.x - 200.0, y, 176.0, 48.0)
+
+
+func open_docs(list: Array[Dictionary], page: int = 0) -> void:
+	if list.is_empty():
+		return
+	doc_list = list
+	doc_page = clampi(page, 0, list.size() - 1)
+	doc_visible = true
+	get_tree().paused = true
+	touches.clear()
+	stick_index = -1
+	move_vec = Vector2.ZERO
+	held.clear()
+	docs_toggled.emit(true)
+
+
+func close_docs() -> void:
+	doc_visible = false
+	get_tree().paused = false
+	docs_toggled.emit(false)
+
+
 func set_settings(open: bool) -> void:
 	settings_visible = open
 	get_tree().paused = open
@@ -152,6 +193,9 @@ func _process(delta: float) -> void:
 # ---------------------------------------------------------------- toques
 
 func _input(event: InputEvent) -> void:
+	if doc_visible and (event.is_action_pressed("action") or event.is_action_pressed("ui_cancel")):
+		close_docs()
+		return
 	if event is InputEventScreenTouch:
 		var t := event as InputEventScreenTouch
 		if t.pressed:
@@ -178,6 +222,14 @@ func _press(index: int, pos: Vector2) -> void:
 	if end_visible:
 		if play_again_rect().has_point(pos):
 			play_again_pressed.emit()
+		return
+	if doc_visible:
+		if doc_button("prev").has_point(pos):
+			doc_page = maxi(0, doc_page - 1)
+		elif doc_button("next").has_point(pos):
+			doc_page = mini(doc_list.size() - 1, doc_page + 1)
+		elif doc_button("close").has_point(pos):
+			close_docs()
 		return
 	if settings_visible:
 		if settings_rect("update").has_point(pos):
@@ -267,6 +319,8 @@ func _draw_ui() -> void:
 		_draw_end(vs)
 	if settings_visible:
 		_draw_settings(vs)
+	if doc_visible:
+		_draw_doc(vs)
 
 
 func _draw_bar() -> void:
@@ -379,3 +433,29 @@ func _draw_settings(vs: Vector2) -> void:
 	canvas.draw_rect(c, Color(0.3, 0.3, 0.3, 0.9))
 	canvas.draw_rect(c, Color(1, 1, 1, 0.6), false, 2.0)
 	_text(Vector2(c.position.x, c.position.y + 31.0), "Cerrar", 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, c.size.x)
+
+
+func _draw_doc(vs: Vector2) -> void:
+	canvas.draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.7))
+	var pr := doc_panel()
+	var paper := Color(0.86, 0.82, 0.7)
+	var ink := Color(0.1, 0.09, 0.08)
+	canvas.draw_rect(pr, paper)
+	canvas.draw_rect(pr, Color(0.3, 0.22, 0.12), false, 4.0)
+	var d: Dictionary = doc_list[doc_page]
+	var inner := pr.size.x - 80.0
+	canvas.draw_string(font, Vector2(pr.position.x + 40.0, pr.position.y + 52.0), str(d["titulo"]), HORIZONTAL_ALIGNMENT_LEFT, inner, 30, ink)
+	canvas.draw_line(Vector2(pr.position.x + 40.0, pr.position.y + 66.0), Vector2(pr.end.x - 40.0, pr.position.y + 66.0), Color(ink, 0.5), 2.0)
+	var text := str(d["texto"])
+	var avail := pr.size.y - 66.0 - 100.0
+	var size := 24
+	while size > 15 and font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, inner, size).y > avail:
+		size -= 1
+	canvas.draw_multiline_string(font, Vector2(pr.position.x + 40.0, pr.position.y + 66.0 + size + 14.0), text, HORIZONTAL_ALIGNMENT_LEFT, inner, size, -1, ink)
+	for which in ["prev", "next", "close"]:
+		var r := doc_button(which)
+		var on: bool = which == "close" or (which == "prev" and doc_page > 0) or (which == "next" and doc_page < doc_list.size() - 1)
+		canvas.draw_rect(r, Color(0.25, 0.2, 0.12, 0.9 if on else 0.3))
+		var label := "<" if which == "prev" else (">" if which == "next" else "Cerrar")
+		canvas.draw_string(font, Vector2(r.position.x, r.position.y + 33.0), label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 26, paper)
+	canvas.draw_string(font, Vector2(pr.position.x + 250.0, pr.end.y - 30.0), "%d / %d" % [doc_page + 1, doc_list.size()], HORIZONTAL_ALIGNMENT_LEFT, 120.0, 22, ink)

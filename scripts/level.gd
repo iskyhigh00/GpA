@@ -13,6 +13,7 @@ const FORCE_COST := 35.0
 const AMPOULE_GAIN := 50.0
 const HOOK_COST := 2.0
 const CAM_GOAL := 1.5
+const DESK_POS := Vector3(-13.5, 0.0, 2.8)
 const KIT_POS := Vector3(16.5, 0.0, -3.5)
 const GRATE_CENTER := Vector3(17.0, 0.0, 4.5)
 const NAV_POINTS: Array[Vector3] = [
@@ -512,6 +513,11 @@ func _build_world() -> void:
 		var vial := Gfx.cyl_m(0.04, 0.16, Gfx.mat_glow(Color(0.85, 0.1, 0.2), 1.2))
 		vial.position = Vector3(-0.4 + i * 0.25, 0.58, 0.0)
 		desk.add_child(vial)
+	for i in 2:
+		var paper := Gfx.box_m(Vector3(0.42, 0.012, 0.3), Gfx.mat_cloth(Color(0.86, 0.82, 0.7)))
+		paper.position = Vector3(0.25 - i * 0.55, 0.51, 0.1 - i * 0.12)
+		paper.rotation_degrees.y = 14.0 - i * 31.0
+		desk.add_child(paper)
 	var win := Gfx.box_m(Vector3(0.05, 1.4, 2.0), Gfx.mat_glow(Color(0.45, 0.6, 0.9), 1.4))
 	win.position = Vector3(-14.95, 2.0, -0.5)
 	add_child(win)
@@ -761,6 +767,9 @@ func do_action() -> void:
 	if dying:
 		return
 	var p := player.global_position
+	if flat_dist(p, DESK_POS) < 2.4:
+		hud.open_docs(Docs.get_docs(["orden", "dispensario"]))
+		return
 	if tray.state == Tray.S.READY and flat_dist(p, tray.start_pos()) < 2.4:
 		tray.push()
 		play("push")
@@ -1007,6 +1016,8 @@ func _update_prompts() -> void:
 	var lines: Array[String] = []
 	var cost := 0.0
 	var p := player.global_position
+	if not done and not dying and flat_dist(p, DESK_POS) < 2.4:
+		lines.append("ACCIÓN: leer los folios de la mesa")
 	if phase == Phase.PLAY and not done and not dying:
 		if tray.state == Tray.S.READY and flat_dist(p, tray.start_pos()) < 2.4:
 			lines.append("ACCIÓN: empujar la bandeja")
