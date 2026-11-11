@@ -20,6 +20,7 @@ func _run() -> void:
 	await _t6_lamp_signal()
 	await _t7_lamp_detects()
 	await _t8_buttons()
+	await _t9_dodge()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -324,8 +325,9 @@ func _t7_lamp_detects() -> void:
 func _t8_buttons() -> void:
 	print("8) Botones táctiles")
 	var lv := await new_level()
-	var got := {"hook": 0, "force": 0, "action": 0, "ampoule": 0, "restart": 0}
+	var got := {"hook": 0, "dodge": 0, "force": 0, "action": 0, "ampoule": 0, "restart": 0}
 	lv.hud.hook_pressed.connect(func() -> void: got["hook"] += 1)
+	lv.hud.dodge_pressed.connect(func() -> void: got["dodge"] += 1)
 	lv.hud.force_pressed.connect(func() -> void: got["force"] += 1)
 	lv.hud.action_pressed.connect(func() -> void: got["action"] += 1)
 	lv.hud.ampoule_pressed.connect(func() -> void: got["ampoule"] += 1)
@@ -341,4 +343,29 @@ func _t8_buttons() -> void:
 		check(got[name] == 1, "botón %s emite su señal" % name)
 	check(lv.hud.stick_index == -1, "los botones no activan el stick")
 	await _frames(90)
+	await free_level(lv)
+
+
+func _t9_dodge() -> void:
+	print("9) Esquiva y bloqueo")
+	var lv := await new_level()
+	await through_door(lv)
+	var g := lv.guard
+	lv.player.global_position = Vector3(5.0, 0.1, 6.5)
+	g.global_position = Vector3(6.6, 0.1, 6.5)
+	g.alert(lv.player.global_position)
+	check(await until(func() -> bool: return g.state == Guard.S.WINDUP, 240), "el guardia prepara un golpe (señalado)")
+	var before := lv.reserve
+	check(await until(func() -> bool: return g.timer < 0.15), "justo antes del impacto")
+	lv.player.do_dodge()
+	check(lv.player.invuln > 0.0 and lv.player.dodge_t > 0.0, "la esquiva da invulnerabilidad breve")
+	await _frames(20)
+	check(is_equal_approx(lv.reserve, before), "esquivar a tiempo evita el daño")
+	check(g.state == Guard.S.STUNNED, "esquiva perfecta: el guardia queda aturdido")
+	check(lv.hud.message_log.any(func(m: String) -> bool: return m.contains("Esquiva perfecta")), "aviso de esquiva perfecta")
+	# Sin esquivar, el golpe duele.
+	await until(func() -> bool: return g.state == Guard.S.WINDUP, 600)
+	var b2 := lv.reserve
+	await _frames(60)
+	check(lv.reserve < b2, "sin esquivar, el golpe quita reserva")
 	await free_level(lv)

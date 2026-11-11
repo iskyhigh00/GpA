@@ -36,6 +36,9 @@ var kit_cross: Array[MeshInstance3D] = []
 var grate_plate: StaticBody3D
 var grate_shape: CollisionShape3D
 var grate_light: OmniLight3D
+var grate_steam: GPUParticles3D
+var music_player: AudioStreamPlayer
+var hitstop_t := 0.0
 
 var reserve := MAX_RESERVE
 var ampoules := 0
@@ -62,7 +65,7 @@ static func register_inputs() -> void:
 	var map := {
 		"move_left": [KEY_A, KEY_LEFT], "move_right": [KEY_D, KEY_RIGHT],
 		"move_forward": [KEY_W, KEY_UP], "move_back": [KEY_S, KEY_DOWN],
-		"hook": [KEY_J], "force": [KEY_K], "action": [KEY_E], "ampoule": [KEY_R],
+		"hook": [KEY_J], "dodge": [KEY_SPACE], "force": [KEY_K], "action": [KEY_E], "ampoule": [KEY_R],
 		"restart_cp": [KEY_T],
 	}
 	for a: String in map:
@@ -88,12 +91,20 @@ func _ready() -> void:
 	_build_entities()
 	_build_hud()
 	_set_objective()
+	if not Gfx.headless:
+		music_player = AudioStreamPlayer.new()
+		music_player.stream = Sfx.music()
+		music_player.volume_db = -13.0
+		add_child(music_player)
+		music_player.play()
 
 
 func _exit_tree() -> void:
 	for ap in pool:
 		ap.stop()
 		ap.stream = null
+	if music_player:
+		music_player.stop()
 
 
 # ---------------------------------------------------------------- construcción
@@ -101,50 +112,234 @@ func _exit_tree() -> void:
 func _build_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.02, 0.03, 0.05)
+	env.background_color = Color(0.015, 0.025, 0.035)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.6, 0.68, 0.78)
-	env.ambient_light_energy = 0.75
+	env.ambient_light_color = Color(0.42, 0.5, 0.62)
+	env.ambient_light_energy = 0.55
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.fog_enabled = true
+	env.fog_light_color = Color(0.07, 0.11, 0.14)
+	env.fog_density = 0.022
+	env.glow_enabled = true
+	env.glow_intensity = 0.6
+	env.glow_bloom = 0.04
+	env.adjustment_enabled = true
+	env.adjustment_contrast = 1.12
+	env.adjustment_saturation = 0.88
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-60.0, 35.0, 0.0)
-	sun.light_energy = 0.45
-	add_child(sun)
+	var moon := DirectionalLight3D.new()
+	moon.rotation_degrees = Vector3(-58.0, 32.0, 0.0)
+	moon.light_color = Color(0.55, 0.68, 0.95)
+	moon.light_energy = 0.7
+	moon.shadow_enabled = true
+	moon.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	moon.directional_shadow_max_distance = 38.0
+	add_child(moon)
 	var warm := OmniLight3D.new()
-	warm.position = Vector3(-10.0, 3.0, 0.0)
-	warm.light_color = Color(1.0, 0.85, 0.6)
+	warm.position = Vector3(-10.0, 2.8, 0.0)
+	warm.light_color = Color(1.0, 0.8, 0.5)
 	warm.omni_range = 11.0
-	warm.light_energy = 1.2
+	warm.light_energy = 1.5
 	add_child(warm)
 	for x in [2.0, 17.0]:
 		var o := OmniLight3D.new()
-		o.position = Vector3(x, 3.4, 0.0)
-		o.light_color = Color(0.6, 0.8, 1.0)
+		o.position = Vector3(x, 3.0, 0.0)
+		o.light_color = Color(0.55, 0.78, 1.0)
 		o.omni_range = 14.0
-		o.light_energy = 1.0
+		o.light_energy = 1.1
 		add_child(o)
 
 
-func _wall(cx: float, cz: float, sx: float, sz: float) -> void:
-	Gfx.solid_box(self, Vector3(cx, 1.6, cz), Vector3(sx, 3.2, sz), WALL)
+func _wall(cx: float, cz: float, sx: float, sz: float, m: Material = null) -> void:
+	Gfx.solid_m(self, Vector3(cx, 1.6, cz), Vector3(sx, 3.2, sz), m if m else Gfx.mat_stone())
+	# Moldura superior oscura.
+	var cap := Gfx.box_m(Vector3(sx + 0.12, 0.14, sz + 0.12), Gfx.mat_rust())
+	cap.position = Vector3(cx, 3.27, cz)
+	add_child(cap)
+
+
+func _pipe_x(x0: float, x1: float, y: float, z: float, r: float) -> void:
+	var p := Gfx.cyl_m(r, absf(x1 - x0), Gfx.mat_rust())
+	p.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+	p.position = Vector3((x0 + x1) * 0.5, y, z)
+	add_child(p)
+	var n := int(absf(x1 - x0) / 4.0)
+	for i in n + 1:
+		var br := Gfx.box_m(Vector3(0.12, r * 2.6, 0.12), Gfx.mat_gloss(Color(0.08, 0.08, 0.09), 0.5))
+		br.position = Vector3(minf(x0, x1) + 0.5 + i * 4.0, y, z)
+		add_child(br)
+
+
+func _barrel(x: float, z: float) -> void:
+	var b := StaticBody3D.new()
+	b.position = Vector3(x, 0.0, z)
+	b.collision_layer = 2
+	var cs := CollisionShape3D.new()
+	var sh := CylinderShape3D.new()
+	sh.radius = 0.4
+	sh.height = 0.95
+	cs.shape = sh
+	cs.position = Vector3(0.0, 0.475, 0.0)
+	b.add_child(cs)
+	var body := Gfx.cyl_m(0.38, 0.95, Gfx.mat_rust(), 0.34)
+	body.position = Vector3(0.0, 0.475, 0.0)
+	b.add_child(body)
+	for yy in [0.2, 0.75]:
+		var band := Gfx.cyl_m(0.405, 0.06, Gfx.mat_gloss(Color(0.07, 0.07, 0.08), 0.4))
+		band.position = Vector3(0.0, yy, 0.0)
+		b.add_child(band)
+	add_child(b)
+
+
+func _crate(pos: Vector3, size: Vector3) -> void:
+	var b := Gfx.solid_m(self, pos, size, Gfx.mat_wood(), 2)
+	for sy in [-1.0, 1.0]:
+		var slat := Gfx.box_m(Vector3(size.x + 0.04, 0.07, size.z + 0.04), Gfx.mat_gloss(Color(0.1, 0.07, 0.05), 0.7))
+		slat.position = Vector3(0.0, sy * (size.y * 0.5 - 0.05), 0.0)
+		b.add_child(slat)
+
+
+func _stall(pos: Vector3, size: Vector3) -> void:
+	var b := Gfx.solid_m(self, pos, size, Gfx.mat_wood(), 2)
+	var ice := Gfx.box_m(Vector3(size.x * 0.9, 0.12, size.z * 0.85), Gfx.mat_gloss(Color(0.6, 0.8, 0.9), 0.15))
+	ice.position = Vector3(0.0, size.y * 0.5 + 0.06, 0.0)
+	b.add_child(ice)
+	var fm := Gfx.mat_gloss(Color(0.62, 0.7, 0.75), 0.2)
+	for i in 5:
+		var f := Gfx.capsule_m(0.07, 0.42, fm)
+		f.rotation_degrees = Vector3(0.0, i * 17.0, 90.0)
+		f.position = Vector3(-size.x * 0.35 + i * size.x * 0.17, size.y * 0.5 + 0.17, (i % 2 - 0.5) * size.z * 0.3)
+		b.add_child(f)
+
+
+func _hang_lamp(x: float, z: float) -> void:
+	var chain := Gfx.cyl_m(0.015, 0.7, Gfx.mat_gloss(Color(0.05, 0.05, 0.05), 0.5))
+	chain.position = Vector3(x, 3.0, z)
+	add_child(chain)
+	var shade := Gfx.cyl_m(0.1, 0.22, Gfx.mat_rust(), 0.3)
+	shade.position = Vector3(x, 2.55, z)
+	add_child(shade)
+	var bulb := Gfx.sphere_m(0.09, Gfx.mat_glow(Color(1.0, 0.8, 0.45), 3.0))
+	bulb.position = Vector3(x, 2.42, z)
+	add_child(bulb)
+
+
+func _sign(text: String, pos: Vector3, rot_y: float, col: Color, px: float = 0.012) -> void:
+	var l := Label3D.new()
+	l.text = text
+	l.font_size = 72
+	l.pixel_size = px
+	l.modulate = col
+	l.outline_size = 10
+	l.outline_modulate = Color(0.0, 0.0, 0.0, 0.9)
+	l.position = pos
+	l.rotation_degrees.y = rot_y
+	add_child(l)
+
+
+func _puddle(x: float, z: float, r: float) -> void:
+	var p := Gfx.cyl_m(r, 0.01, Gfx.mat_gloss(Color(0.02, 0.03, 0.04), 0.03))
+	p.position = Vector3(x, 0.02, z)
+	Gfx.no_shadow(p)
+	add_child(p)
+
+
+func _build_particles() -> void:
+	if Gfx.headless:
+		return
+	var qm := StandardMaterial3D.new()
+	qm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	qm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	qm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	qm.albedo_color = Color(0.8, 0.9, 1.0, 0.35)
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.05, 0.05)
+	quad.material = qm
+	var dust := GPUParticles3D.new()
+	dust.amount = 90
+	dust.lifetime = 9.0
+	dust.preprocess = 9.0
+	dust.visibility_aabb = AABB(Vector3(-16.0, -2.0, -12.0), Vector3(32.0, 8.0, 24.0))
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(14.0, 1.6, 9.0)
+	pm.direction = Vector3(0.4, 0.1, 0.1)
+	pm.spread = 180.0
+	pm.initial_velocity_min = 0.05
+	pm.initial_velocity_max = 0.25
+	pm.gravity = Vector3.ZERO
+	dust.process_material = pm
+	dust.draw_pass_1 = quad
+	dust.position = Vector3(9.0, 1.8, 0.0)
+	add_child(dust)
+	var sm := StandardMaterial3D.new()
+	sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sm.albedo_color = Color(0.85, 0.9, 0.95, 0.12)
+	var sq := QuadMesh.new()
+	sq.size = Vector2(0.9, 0.9)
+	sq.material = sm
+	grate_steam = GPUParticles3D.new()
+	grate_steam.amount = 24
+	grate_steam.lifetime = 3.0
+	grate_steam.emitting = false
+	grate_steam.visibility_aabb = AABB(Vector3(-3.0, -2.0, -3.0), Vector3(6.0, 8.0, 6.0))
+	var sp := ParticleProcessMaterial.new()
+	sp.direction = Vector3.UP
+	sp.spread = 18.0
+	sp.initial_velocity_min = 0.5
+	sp.initial_velocity_max = 1.0
+	sp.gravity = Vector3.ZERO
+	sp.scale_min = 0.6
+	sp.scale_max = 1.6
+	grate_steam.process_material = sp
+	grate_steam.draw_pass_1 = sq
+	grate_steam.position = GRATE_CENTER + Vector3(0.0, 0.2, 0.0)
+	add_child(grate_steam)
+
+
+func spark(pos: Vector3, c: Color = Color(1.0, 0.8, 0.4)) -> void:
+	if Gfx.headless:
+		return
+	var p := CPUParticles3D.new()
+	p.one_shot = true
+	p.amount = 14
+	p.lifetime = 0.5
+	p.explosiveness = 1.0
+	p.direction = Vector3.UP
+	p.spread = 180.0
+	p.initial_velocity_min = 2.5
+	p.initial_velocity_max = 5.0
+	p.gravity = Vector3(0.0, -9.0, 0.0)
+	var m := BoxMesh.new()
+	m.size = Vector3(0.05, 0.05, 0.05)
+	m.material = Gfx.mat_glow(c, 3.0)
+	p.mesh = m
+	p.position = pos
+	add_child(p)
+	p.emitting = true
+	get_tree().create_timer(1.0).timeout.connect(p.queue_free)
 
 
 func _build_world() -> void:
-	var floor_c := Color(0.2, 0.25, 0.3)
+	var stone := Gfx.mat_stone()
+	var plaster := Gfx.mat_plaster()
+	var floor_m := Gfx.mat_floor()
 	# Suelo en losas, con hueco para la rejilla (x 16..18, z 3.5..5.5).
-	Gfx.solid_box(self, Vector3(4.0, -0.25, -3.25), Vector3(38.0, 0.5, 13.5), floor_c)
-	Gfx.solid_box(self, Vector3(4.0, -0.25, 7.75), Vector3(38.0, 0.5, 4.5), floor_c)
-	Gfx.solid_box(self, Vector3(0.5, -0.25, 4.5), Vector3(31.0, 0.5, 2.0), floor_c)
-	Gfx.solid_box(self, Vector3(20.5, -0.25, 4.5), Vector3(5.0, 0.5, 2.0), floor_c)
-	var rug := Gfx.box_mesh(Vector3(9.6, 0.02, 7.6), Color(0.55, 0.5, 0.42))
-	rug.position = Vector3(-10.0, 0.01, 0.0)
-	add_child(rug)
+	Gfx.solid_m(self, Vector3(4.0, -0.25, -3.25), Vector3(38.0, 0.5, 13.5), floor_m)
+	Gfx.solid_m(self, Vector3(4.0, -0.25, 7.75), Vector3(38.0, 0.5, 4.5), floor_m)
+	Gfx.solid_m(self, Vector3(0.5, -0.25, 4.5), Vector3(31.0, 0.5, 2.0), floor_m)
+	Gfx.solid_m(self, Vector3(20.5, -0.25, 4.5), Vector3(5.0, 0.5, 2.0), floor_m)
+	var boards := Gfx.box_m(Vector3(9.6, 0.02, 7.6), Gfx.mat_wood())
+	boards.position = Vector3(-10.0, 0.012, 0.0)
+	add_child(boards)
 	# Consultorio.
-	_wall(-15.2, 0.0, 0.4, 8.4)
-	_wall(-10.0, -4.2, 10.4, 0.4)
-	_wall(-10.0, 4.2, 10.4, 0.4)
+	_wall(-15.2, 0.0, 0.4, 8.4, plaster)
+	_wall(-10.0, -4.2, 10.4, 0.4, plaster)
+	_wall(-10.0, 4.2, 10.4, 0.4, plaster)
 	# Lonja: muros exteriores.
 	_wall(9.0, -10.2, 28.4, 0.4)
 	_wall(9.0, 10.2, 28.4, 0.4)
@@ -155,6 +350,9 @@ func _build_world() -> void:
 	_wall(DIVIDER_X, -9.0, 0.4, 2.0)
 	_wall(DIVIDER_X, 0.0, 0.4, 10.0)
 	_wall(DIVIDER_X, 9.0, 0.4, 2.0)
+	# Pilastras en el muro norte y este (no estorban las rutas).
+	for x in [-2.0, 3.0, 13.0, 19.0]:
+		Gfx.solid_m(self, Vector3(x, 1.6, -9.75), Vector3(0.7, 3.2, 0.5), Gfx.mat_rust(), 1)
 	# Puerta del consultorio.
 	door_body = StaticBody3D.new()
 	door_body.position = Vector3(DOOR_X, 1.5, 0.0)
@@ -163,30 +361,65 @@ func _build_world() -> void:
 	ds.size = Vector3(0.3, 3.0, 2.4)
 	door_shape.shape = ds
 	door_body.add_child(door_shape)
-	door_body.add_child(Gfx.box_mesh(Vector3(0.3, 3.0, 2.4), Color(0.55, 0.38, 0.2)))
+	door_body.add_child(Gfx.box_m(Vector3(0.3, 3.0, 2.4), Gfx.mat_wood()))
+	var handle := Gfx.sphere_m(0.07, Gfx.mat_gloss(Color(0.8, 0.65, 0.3), 0.2))
+	handle.position = Vector3(0.22, 0.0, 0.8)
+	door_body.add_child(handle)
 	add_child(door_body)
-	# Camilla y mesa del consultorio.
-	Gfx.prop_box(self, Vector3(-12.5, 0.4, -2.5), Vector3(2.0, 0.8, 0.9), Color(0.8, 0.82, 0.85))
-	Gfx.prop_box(self, Vector3(-13.5, 0.5, 2.8), Vector3(1.6, 1.0, 0.8), Color(0.45, 0.32, 0.2))
-	# Mesas de pescado y cajas.
-	Gfx.prop_box(self, Vector3(3.0, 0.5, 3.0), Vector3(1.6, 1.0, 1.2), Color(0.5, 0.42, 0.3))
-	Gfx.prop_box(self, Vector3(1.0, 0.5, -2.5), Vector3(1.4, 1.0, 1.0), Color(0.5, 0.42, 0.3))
-	Gfx.prop_box(self, Vector3(20.5, 0.5, -6.0), Vector3(1.4, 1.0, 1.4), Color(0.5, 0.42, 0.3))
-	Gfx.prop_box(self, Vector3(21.0, 0.5, -1.5), Vector3(1.2, 1.0, 1.2), Color(0.5, 0.42, 0.3))
+	# Consultorio: camilla, mesa con ampollas, armario, ventana.
+	var cot := Gfx.prop_box(self, Vector3(-12.5, 0.4, -2.5), Vector3(2.0, 0.8, 0.9), Color(0.8, 0.82, 0.85))
+	var blanket := Gfx.box_m(Vector3(1.2, 0.12, 0.95), Gfx.mat_cloth(Color(0.35, 0.12, 0.14)))
+	blanket.position = Vector3(0.35, 0.44, 0.0)
+	cot.add_child(blanket)
+	var desk := Gfx.solid_m(self, Vector3(-13.5, 0.5, 2.8), Vector3(1.6, 1.0, 0.8), Gfx.mat_wood(), 2)
+	for i in 3:
+		var vial := Gfx.cyl_m(0.04, 0.16, Gfx.mat_glow(Color(0.85, 0.1, 0.2), 1.2))
+		vial.position = Vector3(-0.4 + i * 0.25, 0.58, 0.0)
+		desk.add_child(vial)
+	var win := Gfx.box_m(Vector3(0.05, 1.4, 2.0), Gfx.mat_glow(Color(0.45, 0.6, 0.9), 1.4))
+	win.position = Vector3(-14.95, 2.0, -0.5)
+	add_child(win)
+	var stain := Gfx.cyl_m(0.7, 0.01, Gfx.mat_cloth(Color(0.3, 0.03, 0.04)))
+	stain.position = Vector3(-8.0, 0.025, 1.5)
+	add_child(stain)
+	_sign("CONSULTORIO", Vector3(-4.8, 2.85, 0.0), 90.0, Color(0.85, 0.85, 0.75), 0.008)
+	_hang_lamp(-10.0, 0.0)
+	# Lonja: puestos, cajas, barriles.
+	_stall(Vector3(3.0, 0.5, 3.0), Vector3(1.6, 1.0, 1.2))
+	_stall(Vector3(1.0, 0.5, -2.5), Vector3(1.4, 1.0, 1.0))
+	_crate(Vector3(20.5, 0.5, -6.0), Vector3(1.4, 1.0, 1.4))
+	_crate(Vector3(21.0, 0.5, -1.5), Vector3(1.2, 1.0, 1.2))
+	_crate(Vector3(20.6, 1.4, -6.0), Vector3(0.9, 0.8, 0.9))
+	_barrel(21.8, -8.6)
+	_barrel(20.9, -8.8)
+	_barrel(22.0, 2.0)
+	_barrel(14.0, 8.9)
+	_barrel(15.0, 9.0)
+	_pipe_x(-4.5, 22.5, 2.7, -9.85, 0.14)
+	_pipe_x(-4.5, 22.5, 2.2, -9.85, 0.07)
+	_pipe_x(9.5, 22.5, 2.7, 9.85, 0.12)
+	for x in [-1.0, 5.0, 12.0, 18.0]:
+		_hang_lamp(x, -8.6)
+		_hang_lamp(x, 8.6)
+	_sign("LONJA DEL CANDIL", Vector3(8.0, 2.5, -9.93), 0.0, Color(0.9, 0.78, 0.45), 0.014)
+	_sign("LOTE 14", Vector3(17.0, 2.4, 9.93), 180.0, Color(0.85, 0.35, 0.3), 0.012)
+	_sign("SUBASTA POR SECTORES", Vector3(-1.0, 2.5, 9.93), 180.0, Color(0.75, 0.8, 0.85), 0.01)
+	for pd in [Vector3(-1.0, 0.0, 2.0), Vector3(6.0, 0.0, -1.0), Vector3(13.0, 0.0, 2.5), Vector3(19.0, 0.0, 7.0), Vector3(-3.5, 0.0, -6.0), Vector3(10.0, 0.0, -7.5)]:
+		_puddle(pd.x, pd.z, 0.9 + fmod(pd.x * 0.37, 0.8))
 	# Carril de la bandeja en el muro sur.
-	var rail := Gfx.box_mesh(Vector3(Tray.END_X - Tray.START_X + 2.0, 0.08, 0.1), Color(0.5, 0.52, 0.56))
+	var rail := Gfx.box_m(Vector3(Tray.END_X - Tray.START_X + 2.0, 0.08, 0.1), Gfx.mat_gloss(Color(0.5, 0.52, 0.56), 0.3))
 	rail.position = Vector3((Tray.START_X + Tray.END_X) * 0.5, Tray.RAIL_Y - 0.08, Tray.RAIL_Z + 0.1)
 	add_child(rail)
 	# Botiquín de servicio.
-	var kit := Gfx.prop_box(self, KIT_POS + Vector3(0.0, 0.6, 0.0), Vector3(1.0, 1.2, 0.6), Color(0.85, 0.87, 0.9))
+	var kit := Gfx.solid_m(self, KIT_POS + Vector3(0.0, 0.6, 0.0), Vector3(1.0, 1.2, 0.6), Gfx.mat_gloss(Color(0.82, 0.85, 0.88), 0.4), 2)
 	for sz: Vector3 in [Vector3(0.5, 0.14, 0.04), Vector3(0.14, 0.5, 0.04)]:
-		var cross := Gfx.box_mesh(sz, Color(0.85, 0.1, 0.15), 0.6)
+		var cross := Gfx.box_m(sz, Gfx.mat_glow(Color(0.85, 0.1, 0.15), 1.5))
 		cross.position = Vector3(0.0, 0.0, 0.33)
 		kit.add_child(cross)
 		kit_cross.append(cross)
 	# Contrapeso y rejilla.
-	Gfx.prop_box(self, Vector3(19.7, 1.0, 0.0), Vector3(0.5, 2.0, 1.4), Color(0.6, 0.45, 0.2))
-	var pit := Gfx.box_mesh(Vector3(2.0, 0.1, 2.0), Color(0.0, 0.0, 0.0))
+	Gfx.solid_m(self, Vector3(19.7, 1.0, 0.0), Vector3(0.5, 2.0, 1.4), Gfx.mat_rust(), 2)
+	var pit := Gfx.box_m(Vector3(2.0, 0.1, 2.0), Gfx.mat_cloth(Color(0.0, 0.0, 0.0)))
 	pit.position = GRATE_CENTER + Vector3(0.0, -1.5, 0.0)
 	add_child(pit)
 	grate_light = OmniLight3D.new()
@@ -202,12 +435,13 @@ func _build_world() -> void:
 	gs.size = Vector3(2.0, 0.1, 2.0)
 	grate_shape.shape = gs
 	grate_plate.add_child(grate_shape)
-	grate_plate.add_child(Gfx.box_mesh(Vector3(2.0, 0.1, 2.0), Color(0.35, 0.36, 0.4)))
+	grate_plate.add_child(Gfx.box_m(Vector3(2.0, 0.1, 2.0), Gfx.mat_rust()))
 	for i in 5:
-		var bar := Gfx.box_mesh(Vector3(0.08, 0.06, 2.0), Color(0.9, 0.8, 0.2))
+		var bar := Gfx.box_m(Vector3(0.08, 0.06, 2.0), Gfx.mat_gloss(Color(0.12, 0.12, 0.13), 0.4))
 		bar.position = Vector3(-0.8 + i * 0.4, 0.06, 0.0)
 		grate_plate.add_child(bar)
 	add_child(grate_plate)
+	_build_particles()
 
 
 func _build_entities() -> void:
@@ -238,6 +472,7 @@ func _build_hud() -> void:
 	add_child(hud)
 	hud.cam_dragged.connect(_on_cam_drag)
 	hud.hook_pressed.connect(player.do_hook)
+	hud.dodge_pressed.connect(player.do_dodge)
 	hud.force_pressed.connect(try_force)
 	hud.action_pressed.connect(do_action)
 	hud.ampoule_pressed.connect(use_ampoule)
@@ -322,17 +557,34 @@ func spend(amount: float) -> void:
 
 
 func hurt_player(dmg: float) -> void:
-	if player.hurt_cd > 0.0 or dying or done:
+	if player.hurt_cd > 0.0 or player.invuln > 0.0 or dying or done:
 		return
 	player.hurt_cd = 0.8
+	player.add_shake(0.35)
 	hud.flash = 1.0
 	play("hit")
 	spend(dmg)
 
 
-func on_guard_hit(_hits: int) -> void:
+func on_guard_hit(_hits: int, pos: Vector3) -> void:
 	combat = true
 	play("hit")
+	hitstop_t = 0.07
+	player.add_shake(0.2)
+	spark(pos)
+
+
+func on_guard_block(pos: Vector3) -> void:
+	play("block")
+	spark(pos, Color(0.7, 0.85, 1.0))
+	player.add_shake(0.1)
+	hud.say("¡Bloqueó! Esquiva y espera tu momento.", 2.0)
+
+
+func perfect_dodge() -> void:
+	play("perfect")
+	hitstop_t = 0.05
+	hud.say("¡Esquiva perfecta! Aprovecha el hueco.", 2.0)
 
 
 func on_guard_alert() -> void:
@@ -434,6 +686,8 @@ func _respawn() -> void:
 	grate_plate.position = GRATE_CENTER + Vector3(0.0, -0.05, 0.0)
 	grate_plate.visible = true
 	grate_light.light_energy = 0.0
+	if grate_steam:
+		grate_steam.emitting = false
 	tray.reset()
 	guard.reset()
 	lamp.reset()
@@ -448,6 +702,8 @@ func open_grate() -> void:
 	grate_shape.set_deferred("disabled", true)
 	grate_plate.visible = false
 	grate_light.light_energy = 2.0
+	if grate_steam:
+		grate_steam.emitting = true
 	_set_objective()
 
 
@@ -548,6 +804,8 @@ func _process(_delta: float) -> void:
 	player.touch_move = hud.move_vec
 	if Input.is_action_just_pressed("hook"):
 		player.do_hook()
+	if Input.is_action_just_pressed("dodge"):
+		player.do_dodge()
 	if Input.is_action_just_pressed("force"):
 		try_force()
 	if Input.is_action_just_pressed("action"):
@@ -559,6 +817,7 @@ func _process(_delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	hitstop_t = maxf(0.0, hitstop_t - delta)
 	if not done:
 		elapsed += delta
 	if door_open and door_body.position.y < 4.8:

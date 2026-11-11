@@ -4,6 +4,7 @@ extends CanvasLayer
 ## Los toques se gestionan a mano en _input (multitáctil, sin ratón emulado).
 
 signal hook_pressed
+signal dodge_pressed
 signal force_pressed
 signal action_pressed
 signal ampoule_pressed
@@ -41,6 +42,7 @@ var flash := 0.0
 var end_visible := false
 var end_lines: Array[String] = []
 var time := 0.0
+var vignette: GradientTexture2D
 
 
 func _ready() -> void:
@@ -51,6 +53,17 @@ func _ready() -> void:
 	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(canvas)
 	canvas.draw.connect(_draw_ui)
+	var g := Gradient.new()
+	g.set_color(0, Color(0, 0, 0, 0.0))
+	g.set_color(1, Color(0, 0, 0, 0.7))
+	g.set_offset(0, 0.55)
+	vignette = GradientTexture2D.new()
+	vignette.gradient = g
+	vignette.fill = GradientTexture2D.FILL_RADIAL
+	vignette.fill_from = Vector2(0.5, 0.5)
+	vignette.fill_to = Vector2(1.0, 0.5)
+	vignette.width = 128
+	vignette.height = 128
 
 
 func view_size() -> Vector2:
@@ -61,9 +74,10 @@ func buttons() -> Dictionary:
 	var vs := view_size()
 	return {
 		"hook": {"c": Vector2(vs.x - 125.0, vs.y - 125.0), "r": 66.0, "t": "GANCHO"},
-		"force": {"c": Vector2(vs.x - 265.0, vs.y - 85.0), "r": 46.0, "t": "FUERZA"},
-		"action": {"c": Vector2(vs.x - 115.0, vs.y - 275.0), "r": 46.0, "t": "ACCIÓN"},
-		"ampoule": {"c": Vector2(vs.x - 255.0, vs.y - 215.0), "r": 46.0, "t": "AMPOLLA"},
+		"dodge": {"c": Vector2(vs.x - 270.0, vs.y - 70.0), "r": 46.0, "t": "ESQUIVA"},
+		"force": {"c": Vector2(vs.x - 285.0, vs.y - 185.0), "r": 46.0, "t": "FUERZA"},
+		"action": {"c": Vector2(vs.x - 190.0, vs.y - 285.0), "r": 46.0, "t": "ACCIÓN"},
+		"ampoule": {"c": Vector2(vs.x - 75.0, vs.y - 285.0), "r": 46.0, "t": "AMPOLLA"},
 		"restart": {"c": Vector2(vs.x - 44.0, 44.0), "r": 26.0, "t": "↻"},
 	}
 
@@ -143,6 +157,8 @@ func _press(index: int, pos: Vector2) -> void:
 		match bname:
 			"hook":
 				hook_pressed.emit()
+			"dodge":
+				dodge_pressed.emit()
 			"force":
 				force_pressed.emit()
 			"action":
@@ -199,6 +215,8 @@ func _text(pos: Vector2, s: String, size: int, col: Color, align: HorizontalAlig
 
 func _draw_ui() -> void:
 	var vs := view_size()
+	canvas.draw_texture_rect(vignette, Rect2(Vector2.ZERO, vs), false)
+	_text(Vector2(vs.x - 150.0, 100.0), "%d FPS" % int(Engine.get_frames_per_second()), 16, Color(0.7, 0.9, 0.7, 0.8), HORIZONTAL_ALIGNMENT_RIGHT, 110.0)
 	_draw_bar()
 	_draw_texts(vs)
 	_draw_controls(vs)

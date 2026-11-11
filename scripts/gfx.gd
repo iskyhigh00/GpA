@@ -122,3 +122,174 @@ static func prop_box(parent: Node, pos: Vector3, size: Vector3, c: Color) -> Sta
 	var b := solid_box(parent, pos, size, c)
 	b.collision_layer = 2
 	return b
+
+
+# ---------------------------------------------------------------- materiales procedurales
+
+static var _mats: Dictionary = {}
+
+
+static func _noise_tex(seed_v: int, freq: float, c0: Color, c1: Color, normal: bool = false, size: int = 256) -> NoiseTexture2D:
+	var n := FastNoiseLite.new()
+	n.seed = seed_v
+	n.frequency = freq
+	n.fractal_octaves = 4
+	var t := NoiseTexture2D.new()
+	t.noise = n
+	t.width = size
+	t.height = size
+	t.seamless = true
+	if normal:
+		t.as_normal_map = true
+		t.bump_strength = 6.0
+	else:
+		var g := Gradient.new()
+		g.set_color(0, c0)
+		g.set_color(1, c1)
+		t.color_ramp = g
+	return t
+
+
+## Material con ruido triplanar (sirve para cajas de cualquier tamaño sin UV).
+static func _tri(key: String, seed_v: int, c0: Color, c1: Color, rough: float, metal: float, freq: float, scale_f: float) -> StandardMaterial3D:
+	if _mats.has(key):
+		return _mats[key]
+	var m := StandardMaterial3D.new()
+	m.roughness = rough
+	m.metallic = metal
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE * scale_f
+	m.albedo_color = Color.WHITE
+	if headless:
+		m.albedo_color = c0.lerp(c1, 0.5)
+	else:
+		m.albedo_texture = _noise_tex(seed_v, freq, c0, c1)
+		m.normal_enabled = true
+		m.normal_texture = _noise_tex(seed_v + 11, freq * 1.6, c0, c1, true)
+		m.normal_scale = 0.8
+	_mats[key] = m
+	return m
+
+
+static func mat_rust() -> StandardMaterial3D:
+	return _tri("rust", 3, Color(0.12, 0.07, 0.05), Color(0.5, 0.27, 0.12), 0.55, 0.6, 0.012, 0.35)
+
+
+static func mat_stone() -> StandardMaterial3D:
+	return _tri("stone", 5, Color(0.1, 0.13, 0.15), Color(0.34, 0.4, 0.42), 0.35, 0.0, 0.01, 0.3)
+
+
+static func mat_floor() -> StandardMaterial3D:
+	return _tri("floor", 8, Color(0.05, 0.07, 0.09), Color(0.22, 0.27, 0.3), 0.22, 0.1, 0.008, 0.22)
+
+
+static func mat_wood() -> StandardMaterial3D:
+	return _tri("wood", 12, Color(0.12, 0.07, 0.04), Color(0.38, 0.23, 0.12), 0.8, 0.0, 0.03, 0.5)
+
+
+static func mat_plaster() -> StandardMaterial3D:
+	return _tri("plaster", 14, Color(0.3, 0.3, 0.27), Color(0.58, 0.56, 0.5), 0.9, 0.0, 0.02, 0.3)
+
+
+static func mat_cloth(c: Color) -> StandardMaterial3D:
+	var key := "cloth%s" % c.to_html()
+	if _mats.has(key):
+		return _mats[key]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.roughness = 0.95
+	_mats[key] = m
+	return m
+
+
+static func mat_gloss(c: Color, rough: float = 0.06) -> StandardMaterial3D:
+	var key := "gloss%s%f" % [c.to_html(), rough]
+	if _mats.has(key):
+		return _mats[key]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.roughness = rough
+	m.metallic = 0.3
+	_mats[key] = m
+	return m
+
+
+static func mat_glow(c: Color, energy: float) -> StandardMaterial3D:
+	var key := "glow%s%f" % [c.to_html(), energy]
+	if _mats.has(key):
+		return _mats[key]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = c
+	m.emission_enabled = true
+	m.emission = c
+	m.emission_energy_multiplier = energy
+	_mats[key] = m
+	return m
+
+
+static func box_m(size: Vector3, m: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = size
+	if not headless:
+		mi.mesh = bm
+	mi.material_override = m
+	return mi
+
+
+static func cyl_m(r: float, h: float, m: Material, r_bottom: float = -1.0) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = r
+	cm.bottom_radius = r if r_bottom < 0.0 else r_bottom
+	cm.height = h
+	cm.radial_segments = 12
+	if not headless:
+		mi.mesh = cm
+	mi.material_override = m
+	return mi
+
+
+static func capsule_m(r: float, h: float, m: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var cm := CapsuleMesh.new()
+	cm.radius = r
+	cm.height = h
+	cm.radial_segments = 12
+	cm.rings = 4
+	if not headless:
+		mi.mesh = cm
+	mi.material_override = m
+	return mi
+
+
+static func sphere_m(r: float, m: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = r
+	sm.height = r * 2.0
+	sm.radial_segments = 14
+	sm.rings = 7
+	if not headless:
+		mi.mesh = sm
+	mi.material_override = m
+	return mi
+
+
+static func solid_m(parent: Node, pos: Vector3, size: Vector3, m: Material, layer: int = 1) -> StaticBody3D:
+	var b := StaticBody3D.new()
+	b.position = pos
+	b.collision_layer = layer
+	var cs := CollisionShape3D.new()
+	var sh := BoxShape3D.new()
+	sh.size = size
+	cs.shape = sh
+	b.add_child(cs)
+	b.add_child(box_m(size, m))
+	parent.add_child(b)
+	return b
+
+
+static func no_shadow(mi: GeometryInstance3D) -> void:
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

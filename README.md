@@ -11,12 +11,12 @@ El APK lo compila GitHub Actions (`.github/workflows/android.yml`) en cada push 
 
 ## Cómo se juega
 - Stick flotante en la mitad izquierda; arrastra en la derecha para la cámara.
-- **GANCHO** golpea (2 golpes desarman al guardia), **FUERZA** arranca el carro de hielo (−35 de reserva), **ACCIÓN** empuja la bandeja o abre el botiquín, **AMPOLLA** restaura 50 de reserva.
+- **GANCHO** golpea (2 golpes desarman al guardia; cada tercer golpe lo bloquea). **ESQUIVA** da una voltereta con invulnerabilidad: el golpe pesado del guardia se anuncia con un aro rojo en el piso, y esquivar justo antes del impacto lo aturde. **FUERZA** arranca el carro de hielo (−35 de reserva), **ACCIÓN** empuja la bandeja o abre el botiquín, **AMPOLLA** restaura 50 de reserva.
 - Norte: sigilo con la bandeja (su ruido atrae a la lámpara y al guardia). Sur: combate. Las dos rutas terminan en el carro; al arrancarlo se abre la rejilla y bajas por el hueco.
 
 ## Probar en el computador
 1. Abre la carpeta con Godot 4.3 y pulsa F5.
-2. Teclas: WASD mover · J gancho · K fuerza · E acción · R ampolla · T volver al punto de control. El ratón actúa como un dedo (mitad izquierda stick, mitad derecha cámara).
+2. Teclas: WASD mover · J gancho · Espacio esquiva · K fuerza · E acción · R ampolla · T volver al punto de control. El ratón actúa como un dedo (mitad izquierda stick, mitad derecha cámara).
 3. Pruebas automáticas:
    ```
    godot --headless --path . --import
