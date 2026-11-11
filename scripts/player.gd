@@ -7,24 +7,27 @@ const ACCEL := 45.0
 const GRAVITY := 24.0
 const HOOK_RANGE := 2.3
 const HOOK_COOLDOWN := 0.55
-const SWING_TIME := 0.28
+const SWING_TIME := 0.42
+const HIT_DELAY := 0.13
 const DODGE_TIME := 0.3
 const DODGE_SPEED := 10.5
 const DODGE_COOLDOWN := 0.9
 const DODGE_INVULN := 0.38
-const CAM_DIST := 6.0
+const CAM_DIST := 5.4
 const CAM_SENS := 0.0055
 
 var level: Level
 var sim_move := Vector2.ZERO
 var touch_move := Vector2.ZERO
 var cam_yaw := -PI * 0.5
-var cam_pitch := 0.7
+var cam_pitch := 0.58
 var cam_total := 0.0
 var facing := -PI * 0.5
 var hook_cd := 0.0
 var hurt_cd := 0.0
 var swing_t := 0.0
+var hit_pending := -1.0
+var faded: Array[MeshInstance3D] = []
 var dodge_t := 0.0
 var dodge_cd := 0.0
 var invuln := 0.0
@@ -40,7 +43,7 @@ var cam_focus := Vector3.ZERO
 
 func _ready() -> void:
 	collision_layer = 4
-	collision_mask = 3
+	collision_mask = 11
 	var cs := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
 	cap.radius = 0.35
@@ -139,6 +142,8 @@ func respawn_at(pos: Vector3) -> void:
 	dodge_t = 0.0
 	dodge_cd = 0.0
 	invuln = 0.0
+	swing_t = 0.0
+	hit_pending = -1.0
 	cam_focus = pos + Vector3(0.0, 1.5, 0.0)
 
 
@@ -157,17 +162,25 @@ func do_hook() -> void:
 		return
 	hook_cd = HOOK_COOLDOWN
 	swing_t = SWING_TIME
+	hit_pending = HIT_DELAY
 	level.spend_hook()
 	level.play("swish")
 	var g := level.guard
 	var to := g.global_position - global_position
 	to.y = 0.0
 	var d := to.length()
+	if g.can_be_hit() and d < 3.2 and d > 0.05:
+		facing = atan2(-to.x, -to.z)
+
+
+## El daño llega en el frame de contacto del golpe, no al pulsar.
+func _resolve_hit() -> void:
+	var g := level.guard
 	if not g.can_be_hit():
 		return
-	if d < 3.2 and d > 0.05:
-		facing = atan2(-to.x, -to.z)
-	if d <= HOOK_RANGE:
+	var to := g.global_position - global_position
+	to.y = 0.0
+	if to.length() <= HOOK_RANGE and level.clear_line(global_position, g.global_position):
 		g.take_hit()
 
 
@@ -183,6 +196,7 @@ func do_dodge() -> void:
 	dodge_cd = DODGE_COOLDOWN
 	invuln = DODGE_INVULN
 	swing_t = 0.0
+	hit_pending = -1.0
 	level.play("dodge")
 
 
@@ -192,6 +206,10 @@ func _physics_process(delta: float) -> void:
 	hook_cd = maxf(0.0, hook_cd - delta)
 	hurt_cd = maxf(0.0, hurt_cd - delta)
 	swing_t = maxf(0.0, swing_t - delta)
+	if hit_pending > 0.0:
+		hit_pending -= delta
+		if hit_pending <= 0.0:
+			_resolve_hit()
 	dodge_cd = maxf(0.0, dodge_cd - delta)
 	invuln = maxf(0.0, invuln - delta)
 	var dir := Vector3.ZERO if locked else _move_dir()
@@ -247,6 +265,19 @@ func _animate_model(delta: float, hs: float) -> void:
 			level.play("step", -16.0)
 
 
+static var _fade_mat: StandardMaterial3D
+
+
+static func _fade_material() -> StandardMaterial3D:
+	if _fade_mat == null:
+		_fade_mat = StandardMaterial3D.new()
+		_fade_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_fade_mat.albedo_color = Color(0.25, 0.3, 0.36, 0.1)
+		_fade_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_fade_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	return _fade_mat
+
+
 func _process(delta: float) -> void:
 	var target := global_position + Vector3(0.0, 1.5, 0.0)
 	cam_focus = cam_focus.lerp(target, 1.0 - exp(-14.0 * delta))
@@ -255,9 +286,26 @@ func _process(delta: float) -> void:
 	var want := focus + off * CAM_DIST
 	var q := PhysicsRayQueryParameters3D.create(focus, want, 1)
 	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	var now: Array[MeshInstance3D] = []
 	if not hit.is_empty():
-		var hp: Vector3 = hit["position"]
-		want = hp + (focus - want).normalized() * 0.25
+		var col := hit["collider"] as Node3D
+		if col != null and col.global_position.y > 0.5:
+			# Muro entre la cámara y Sira: se vuelve casi transparente y la cámara no se encoge.
+			for c in col.get_children():
+				if c is MeshInstance3D:
+					var mi := c as MeshInstance3D
+					if not mi.has_meta("orig_mat"):
+						mi.set_meta("orig_mat", mi.material_override)
+					mi.material_override = _fade_material()
+					now.append(mi)
+		else:
+			var hp: Vector3 = hit["position"]
+			want = hp + (focus - want).normalized() * 0.25
+	for m in faded:
+		if is_instance_valid(m) and not now.has(m):
+			m.material_override = m.get_meta("orig_mat") as Material
+			m.remove_meta("orig_mat")
+	faded = now
 	shake = maxf(0.0, shake - delta * 2.2)
 	if shake > 0.0:
 		want += Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * shake * 0.35

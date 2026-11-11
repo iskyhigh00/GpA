@@ -26,6 +26,7 @@ func _run() -> void:
 	await _t12_docs()
 	await _t13_audio()
 	await _t14_quality()
+	await _t15_combat_fixes()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -301,6 +302,7 @@ func _t5_checkpoint() -> void:
 func _t6_lamp_signal() -> void:
 	print("6) Señal de la lámpara")
 	var lv := await new_level()
+	lv.player.global_position = Vector3(-3.0, 0.1, 0.0)
 	var count := [0]
 	lv.lamp.signal_emitted.connect(func() -> void: count[0] += 1)
 	var min_x := lv.lamp.head_x
@@ -315,6 +317,14 @@ func _t6_lamp_signal() -> void:
 	check(count[0] >= 2, "la señal suena varias veces en 10 s (%d)" % count[0])
 	check(max_x - min_x > 5.0, "la lámpara se mueve (%.1f m)" % (max_x - min_x))
 	check(saw_banner and lv.signals_heard == count[0], "el HUD avisa de cada cambio de lote")
+	lv.hud.banner_t = 0.0
+	lv.player.global_position = Vector3(-11.0, 0.1, 0.0)
+	var quiet := true
+	for i in 420:
+		await physics_frame
+		if lv.hud.banner_t > 0.0:
+			quiet = false
+	check(quiet, "en el consultorio no suena ni se avisa el cambio de lote")
 	await free_level(lv)
 
 
@@ -537,4 +547,69 @@ func _t14_quality() -> void:
 	check(cf.load(Quality.SAVE_PATH) == OK and int(cf.get_value("grafico", "nivel")) == before, "la elección se guarda")
 	touch(lv, 7, lv.hud.settings_rect("close").get_center(), true)
 	touch(lv, 7, lv.hud.settings_rect("close").get_center(), false)
+	await free_level(lv)
+
+
+func _t15_combat_fixes() -> void:
+	print("15) Combate: contacto, muros y colisiones")
+	var lv := await new_level()
+	await through_door(lv)
+	var g := lv.guard
+	var p := lv.player
+	# El gancho no atraviesa muros.
+	p.global_position = Vector3(8.2, 0.1, 0.0)
+	g.global_position = Vector3(9.9, 0.1, 0.0)
+	g.state = Guard.S.CHASE
+	p.hook_cd = 0.0
+	p.do_hook()
+	await _frames(20)
+	check(g.hits == 0, "el gancho no golpea a través de un muro")
+	# El daño llega en el frame de contacto, no al pulsar.
+	p.global_position = Vector3(5.0, 0.1, 6.5)
+	g.global_position = Vector3(6.6, 0.1, 6.5)
+	g.state = Guard.S.STANDDOWN
+	g.state = Guard.S.CHASE
+	g.attack_cd = 5.0
+	p.hook_cd = 0.0
+	p.do_hook()
+	check(g.hits == 0, "al pulsar todavía no hay daño")
+	await _frames(14)
+	check(g.hits == 1 or g.state == Guard.S.BLOCK, "el golpe conecta en el frame de contacto")
+	# El golpe pesado del guardia no atraviesa muros.
+	g.hits = 0
+	g.state = Guard.S.CHASE
+	p.global_position = Vector3(8.2, 0.1, 0.0)
+	g.global_position = Vector3(9.9, 0.1, 0.0)
+	g.slam = true
+	g.state = Guard.S.WINDUP
+	g.timer = 0.05
+	var before := lv.reserve
+	await _frames(10)
+	check(is_equal_approx(lv.reserve, before), "el golpe pesado no daña a través de un muro")
+	# El jugador y el guardia no se atraviesan.
+	g.state = Guard.S.STANDDOWN
+	g.global_position = Vector3(4.0, 0.1, 0.0)
+	p.global_position = Vector3(2.0, 0.1, 0.0)
+	await _frames(5)
+	var t := 0
+	while t < 90:
+		p.sim_move = Vector2(p.cam_right().dot(Vector3.RIGHT), -p.cam_forward().dot(Vector3.RIGHT))
+		await physics_frame
+		t += 1
+	p.sim_move = Vector2.ZERO
+	check(p.global_position.x < g.global_position.x + 0.2, "Sira no atraviesa al guardia")
+	# Muro entre la cámara y Sira: se hace transparente.
+	p.global_position = Vector3(-3.0, 0.1, 9.0)
+	p.cam_yaw = 0.0
+	p.cam_pitch = 0.3
+	await _frames(6)
+	check(p.faded.size() > 0 and p.faded[0].material_override == Player._fade_material(), "el muro que tapa a Sira se vuelve transparente")
+	p.global_position = Vector3(2.0, 0.1, 0.0)
+	p.cam_pitch = 0.58
+	await _frames(6)
+	check(p.faded.is_empty() and not lv.get_child(0).has_meta("orig_mat"), "y vuelve a ser opaco al salir de en medio")
+	# Etiqueta de ruta coherente.
+	lv.route = "sur"
+	lv.combat = false
+	check(lv.route_label().contains("sin combate"), "ruta sur sin pelear: no dice «combate»")
 	await free_level(lv)

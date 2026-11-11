@@ -36,6 +36,10 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `scripts/quality.gd`: Baja (3D 60%, 30 FPS), Media (70%, 40 FPS, por defecto) y Alta (100%, 60 FPS, brillo y MSAA 2x). Botón en Ajustes; se guarda en `user://calidad.cfg`. Richi dijo que el juego se ve «mediocre»: probar Alta en el celu y decidir si el calor es aceptable.
 - Consultorio con camilla armada, estantes con frascos, tubo neumático de latón y palangana. El cono de visión del guardia casi no se ve durante la persecución.
 
+## Informe de QA (agente probador) y lo ya corregido
+- Corregido: daño del gancho en el frame de contacto (0,13 s) y clip a ~1× (`SWING_TIME` 0,42); gancho y golpe pesado ya no atraviesan muros (`clear_line`); jugador y guardia colisionan; cámara más baja (pitch 0,58, dist 5,4) y los muros que tapan a Sira se vuelven translúcidos (material, no `transparency`: no funciona en Compatibility); campana y banner de la lámpara solo en la lonja; puerta oculta al abrir; carteles de una sola cara; charcos más claros; ruta «Sur (sin combate)»; hitstop 0,1 s y sacudida 0,3.
+- Sin hacer (de su informe): segundo enemigo y más contenido (la demo dura ~12 s si se corre), auto-cámara/lock-on, luces cálidas y niebla de color, botones de combate más grandes con iconos y zona segura, gancho y bastón más gruesos, combo con `Punch_*`, animación `Death`, flecha al objetivo, resaltar bandeja y carro, ↻ con pulsación larga, SFX reales de combate, modelos propios góticos.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

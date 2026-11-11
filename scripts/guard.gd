@@ -56,7 +56,7 @@ var lantern: OmniLight3D
 
 func _ready() -> void:
 	collision_layer = 8
-	collision_mask = 3
+	collision_mask = 7
 	var cs := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
 	cap.radius = 0.4
@@ -349,6 +349,8 @@ func _windup(pp: Vector3, delta: float) -> void:
 
 
 func _strike(dmg: float) -> void:
+	if not level.clear_line(global_position, level.player.global_position):
+		return
 	if level.player.invuln > 0.0:
 		level.perfect_dodge()
 		state = S.STUNNED
@@ -482,7 +484,7 @@ func _update_cone() -> void:
 	cone.visible = true
 	var ratio := clampf(detect / DETECT_TIME, 0.0, 1.0)
 	if state == S.CHASE:
-		cone_mat.albedo_color = Color(1.0, 0.15, 0.15, 0.1)
+		cone_mat.albedo_color = Color(1.0, 0.15, 0.15, 0.22)
 	else:
 		cone_mat.albedo_color = Color(1.0, 0.9, 0.3, 0.22).lerp(Color(1.0, 0.25, 0.2, 0.42), ratio)
 	var origin := global_position + Vector3(0.0, 0.6, 0.0)

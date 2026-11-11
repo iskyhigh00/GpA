@@ -169,11 +169,11 @@ func _build_environment() -> void:
 
 
 func _wall(cx: float, cz: float, sx: float, sz: float, m: Material = null) -> void:
-	Gfx.solid_m(self, Vector3(cx, 1.6, cz), Vector3(sx, 3.2, sz), m if m else Gfx.mat_stone())
-	# Moldura superior oscura.
+	var body := Gfx.solid_m(self, Vector3(cx, 1.6, cz), Vector3(sx, 3.2, sz), m if m else Gfx.mat_stone())
+	# Moldura superior oscura (hija del muro, para que se desvanezca con él).
 	var cap := Gfx.box_m(Vector3(sx + 0.12, 0.14, sz + 0.12), Gfx.mat_rust())
-	cap.position = Vector3(cx, 3.27, cz)
-	add_child(cap)
+	cap.position = Vector3(0.0, 1.67, 0.0)
+	body.add_child(cap)
 
 
 func _pipe_x(x0: float, x1: float, y: float, z: float, r: float) -> void:
@@ -252,11 +252,12 @@ func _sign(text: String, pos: Vector3, rot_y: float, col: Color, px: float = 0.0
 	l.outline_modulate = Color(0.0, 0.0, 0.0, 0.9)
 	l.position = pos
 	l.rotation_degrees.y = rot_y
+	l.double_sided = false
 	add_child(l)
 
 
 func _puddle(x: float, z: float, r: float) -> void:
-	var p := Gfx.cyl_m(r, 0.01, Gfx.mat_gloss(Color(0.02, 0.03, 0.04), 0.03))
+	var p := Gfx.cyl_m(r, 0.01, Gfx.mat_gloss(Color(0.11, 0.14, 0.18), 0.12))
 	p.position = Vector3(x, 0.02, z)
 	Gfx.no_shadow(p)
 	add_child(p)
@@ -627,7 +628,7 @@ func _build_world() -> void:
 		_hang_lamp(x, 8.6)
 	_sign("LONJA DEL CANDIL", Vector3(8.0, 2.5, -9.93), 0.0, Color(0.9, 0.78, 0.45), 0.014)
 	_sign("LOTE 14", Vector3(17.0, 2.4, 9.93), 180.0, Color(0.85, 0.35, 0.3), 0.012)
-	_sign("SUBASTA POR SECTORES", Vector3(-1.0, 2.5, 9.93), 180.0, Color(0.75, 0.8, 0.85), 0.01)
+	_sign("SUBASTA POR SECTORES", Vector3(1.0, 2.5, 9.93), 180.0, Color(0.75, 0.8, 0.85), 0.007)
 	for pd in [Vector3(-1.0, 0.0, 2.0), Vector3(6.0, 0.0, -1.0), Vector3(13.0, 0.0, 2.5), Vector3(19.0, 0.0, 7.0), Vector3(-3.5, 0.0, -6.0), Vector3(10.0, 0.0, -7.5)]:
 		_puddle(pd.x, pd.z, 0.9 + fmod(pd.x * 0.37, 0.8))
 	# Carril de la bandeja en el muro sur.
@@ -837,7 +838,9 @@ func next_step(from: Vector3, to: Vector3) -> Vector3:
 
 
 func route_label() -> String:
-	return "Norte (sigilo)" if route != "sur" else "Sur (combate)"
+	if route != "sur":
+		return "Norte (sigilo)"
+	return "Sur (combate)" if combat else "Sur (sin combate)"
 
 
 # ---------------------------------------------------------------- reserva
@@ -866,8 +869,8 @@ func hurt_player(dmg: float) -> void:
 func on_guard_hit(_hits: int, pos: Vector3) -> void:
 	combat = true
 	play("hit")
-	hitstop_t = 0.07
-	player.add_shake(0.2)
+	hitstop_t = 0.1
+	player.add_shake(0.3)
 	spark(pos)
 
 
@@ -885,7 +888,8 @@ func perfect_dodge() -> void:
 
 
 func on_guard_alert() -> void:
-	hud.say("¡El guardia te vio!", 2.5)
+	if hud.message_t < 1.0:
+		hud.say("¡El guardia te vio!", 2.5)
 	play("alarm")
 
 
@@ -1083,6 +1087,8 @@ func _on_tray_arrived(pos: Vector3) -> void:
 
 func _on_lamp_signal() -> void:
 	signals_heard += 1
+	if player.global_position.x < DOOR_X + 1.0:
+		return
 	play("beep")
 	hud.show_banner("CAMBIO DE LOTE", 0.9)
 
@@ -1142,6 +1148,8 @@ func _physics_process(delta: float) -> void:
 		elapsed += delta
 	if door_open and door_body.position.y < 4.8:
 		door_body.position.y = minf(4.8, door_body.position.y + 3.0 * delta)
+	elif door_open and door_body.visible:
+		door_body.visible = false
 	if dying:
 		death_t -= delta
 		if death_t <= 0.0:
