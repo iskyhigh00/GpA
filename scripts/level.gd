@@ -52,6 +52,8 @@ var was_low := false
 var hitstop_t := 0.0
 var update_opened := false
 var quality_env: Environment
+var posters := 0
+var decals := 0
 var updater: Updater
 
 var reserve := MAX_RESERVE
@@ -405,6 +407,60 @@ func _consultorio_details() -> void:
 	add_child(stand)
 
 
+## Cartel de papel clavado en un muro. «normal_deg»: giro en Y (0: mira a +Z, 180: a -Z, 90: a +X, -90: a -X).
+func _poster(file: String, pos: Vector3, normal_deg: float, w: float = 0.8) -> void:
+	var m := Gfx.image_mat("res://assets/carteles/%s.png" % file, false)
+	if m == null:
+		return
+	var q := Gfx.quad_m(Vector2(w, w * 1.5), m)
+	q.position = pos
+	q.rotation_degrees.y = normal_deg
+	add_child(q)
+	posters += 1
+
+
+## Decal (plano con transparencia): en el suelo (wall = false) o en un muro con su orientación.
+func _decal(file: String, pos: Vector3, size: float, rot_deg: float = 0.0, wall: bool = false, wall_deg: float = 0.0, tint: Color = Color.WHITE) -> void:
+	var m := Gfx.image_mat("res://assets/decales/%s.png" % file, true, 0.55)
+	if m == null:
+		return
+	if tint != Color.WHITE:
+		m = m.duplicate() as StandardMaterial3D
+		m.albedo_color = tint
+	var q := Gfx.quad_m(Vector2(size, size), m)
+	q.position = pos
+	if wall:
+		q.rotation_degrees = Vector3(0.0, wall_deg, rot_deg)
+	else:
+		q.rotation_degrees = Vector3(-90.0, rot_deg, 0.0)
+	add_child(q)
+	decals += 1
+
+
+func _build_decor_images() -> void:
+	# Carteles de la lonja.
+	_poster("cartel_bandejas", Vector3(-3.2, 1.75, 9.985), 180.0)
+	_poster("cartel_subasta", Vector3(1.0, 1.75, 9.985), 180.0, 0.7)
+	_poster("cartel_lote_14", Vector3(17.0, 1.75, 9.985), 180.0, 0.7)
+	_poster("cartel_paso_restringido", Vector3(8.79, 1.7, -3.2), -90.0)
+	_poster("cartel_compuertas", Vector3(22.99, 1.7, -3.0), -90.0, 0.7)
+	# Consultorio: sangre, moho.
+	_decal("mancha_sangre_seca", Vector3(-8.0, 0.03, 1.5), 1.7, 20.0)
+	_decal("charco_sangre", Vector3(-12.0, 0.035, -1.6), 1.5, -35.0)
+	_decal("moho_esquina", Vector3(-14.98, 0.7, 3.5), 1.6, 0.0, true, 90.0)
+	_decal("moho_esquina", Vector3(-14.98, 0.7, -3.5), 1.6, 90.0, true, 90.0)
+	# Lonja: grietas, óxido bajo las tuberías, sal en las juntas y manchas.
+	_decal("grieta_larga", Vector3(6.0, 0.03, -2.0), 3.2, 30.0)
+	_decal("grieta_larga", Vector3(15.0, 0.03, -6.0), 2.6, 120.0)
+	_decal("grieta_larga", Vector3(-1.0, 0.03, 5.5), 2.8, 75.0)
+	_decal("oxido_en_gotas", Vector3(3.0, 1.9, -9.98), 1.5, 0.0, true, 0.0)
+	_decal("oxido_en_gotas", Vector3(16.0, 1.7, -9.98), 1.3, 0.0, true, 0.0)
+	_decal("sal_en_juntas", Vector3(17.0, 0.03, 2.4), 2.6, 15.0)
+	_decal("sal_en_juntas", Vector3(-3.5, 0.03, -3.5), 2.2, 50.0)
+	_decal("mancha_sangre_seca", Vector3(10.5, 0.03, 7.6), 1.2, 140.0)
+	_decal("charco_sangre", Vector3(6.4, 0.035, 8.6), 1.3, 10.0, false, 0.0, Color(0.85, 0.8, 0.8))
+
+
 func _build_gothic() -> void:
 	# Arcos sobre los dos pasos del muro divisor.
 	_arch(DIVIDER_X, -6.5)
@@ -604,9 +660,6 @@ func _build_world() -> void:
 	var win := Gfx.box_m(Vector3(0.05, 1.4, 2.0), Gfx.mat_glow(Color(0.45, 0.6, 0.9), 1.4))
 	win.position = Vector3(-14.95, 2.0, -0.5)
 	add_child(win)
-	var stain := Gfx.cyl_m(0.7, 0.01, Gfx.mat_cloth(Color(0.3, 0.03, 0.04)))
-	stain.position = Vector3(-8.0, 0.025, 1.5)
-	add_child(stain)
 	_sign("CONSULTORIO", Vector3(-4.8, 2.85, 0.0), 90.0, Color(0.85, 0.85, 0.75), 0.008)
 	_hang_lamp(-10.0, 0.0)
 	# Lonja: puestos, cajas, barriles.
@@ -627,8 +680,6 @@ func _build_world() -> void:
 		_hang_lamp(x, -8.6)
 		_hang_lamp(x, 8.6)
 	_sign("LONJA DEL CANDIL", Vector3(8.0, 2.5, -9.93), 0.0, Color(0.9, 0.78, 0.45), 0.014)
-	_sign("LOTE 14", Vector3(17.0, 2.4, 9.93), 180.0, Color(0.85, 0.35, 0.3), 0.012)
-	_sign("SUBASTA POR SECTORES", Vector3(1.0, 2.5, 9.93), 180.0, Color(0.75, 0.8, 0.85), 0.007)
 	for pd in [Vector3(-1.0, 0.0, 2.0), Vector3(6.0, 0.0, -1.0), Vector3(13.0, 0.0, 2.5), Vector3(19.0, 0.0, 7.0), Vector3(-3.5, 0.0, -6.0), Vector3(10.0, 0.0, -7.5)]:
 		_puddle(pd.x, pd.z, 0.9 + fmod(pd.x * 0.37, 0.8))
 	# Carril de la bandeja en el muro sur.
@@ -667,6 +718,7 @@ func _build_world() -> void:
 		grate_plate.add_child(bar)
 	add_child(grate_plate)
 	_build_gothic()
+	_build_decor_images()
 	_build_particles()
 
 

@@ -366,3 +366,31 @@ static func torus_m(inner: float, outer: float, m: Material) -> MeshInstance3D:
 		mi.mesh = tm
 	mi.material_override = m
 	return mi
+
+
+static func quad_m(size: Vector2, m: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var qm := QuadMesh.new()
+	qm.size = size
+	if not headless:
+		mi.mesh = qm
+	mi.material_override = m
+	no_shadow(mi)
+	return mi
+
+
+## Imagen con transparencia (decales) o cartel opaco, cargada desde assets/.
+static func image_mat(path: String, alpha: bool, rough: float = 0.85) -> StandardMaterial3D:
+	var key := "img" + path
+	if _mats.has(key):
+		return _mats[key]
+	if not ResourceLoader.exists(path):
+		return null
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = load(path)
+	m.roughness = rough
+	if alpha:
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_mats[key] = m
+	return m

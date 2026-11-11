@@ -26,6 +26,7 @@ func _run() -> void:
 	await _t12_docs()
 	await _t13_audio()
 	await _t14_quality()
+	await _t16_decor()
 	await _t15_combat_fixes()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
@@ -617,4 +618,14 @@ func _t15_combat_fixes() -> void:
 	lv.route = "sur"
 	lv.combat = false
 	check(lv.route_label().contains("sin combate"), "ruta sur sin pelear: no dice «combate»")
+	await free_level(lv)
+
+
+func _t16_decor() -> void:
+	print("16) Carteles y decales")
+	var lv := await new_level()
+	check(lv.posters == 5, "hay 5 carteles en los muros (%d)" % lv.posters)
+	check(lv.decals >= 12, "hay decales de sangre, grietas, óxido, sal y moho (%d)" % lv.decals)
+	for f in ["mancha_sangre_seca", "charco_sangre", "oxido_en_gotas", "grieta_larga", "sal_en_juntas", "moho_esquina"]:
+		check(ResourceLoader.exists("res://assets/decales/%s.png" % f), "existe el decal «%s»" % f)
 	await free_level(lv)

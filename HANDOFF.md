@@ -48,6 +48,11 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 ## Recursos del zip de ChatGPT (integrados)
 - Texturas: `brick_wall_10` (muro divisor), `metal_063` (tuberías y carro), `moss_wood` (puestos y cajones). Sonidos (preescuchas LQ de Freesound, CC0; originales pendientes por login): impacto del gancho, golpe recibido, bloqueo, caída (al morir) y puerta (abre). `puerta_cierra` está en `assets/audio/juego/` sin usar. Fuentes y licencias en `assets/LEEME_extra.txt`.
 
+## Carteles y decales (tanda 3 de ChatGPT, integrados)
+- `assets/carteles/` (5 carteles con texto en español) y `assets/decales/` (6 PNG transparentes). Imágenes generadas por IA para el proyecto (sin licencia CC0 externa; ver `assets/LEEME.txt`).
+- `level.gd`: `_poster()` y `_decal()` (planos con transparencia; el renderer Compatibility no admite `Decal`) y `_build_decor_images()` con las posiciones. Sustituyen a las etiquetas «LOTE 14» y «SUBASTA POR SECTORES».
+- De la tanda 3 aún no llegaron: modelos 3D de escenario, texturas extra, sonidos extra, música e iconos de botones.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.
