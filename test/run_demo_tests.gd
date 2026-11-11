@@ -21,6 +21,7 @@ func _run() -> void:
 	await _t7_lamp_detects()
 	await _t8_buttons()
 	await _t9_dodge()
+	await _t10_settings()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -368,4 +369,22 @@ func _t9_dodge() -> void:
 	var b2 := lv.reserve
 	await _frames(60)
 	check(lv.reserve < b2, "sin esquivar, el golpe quita reserva")
+	await free_level(lv)
+
+
+func _t10_settings() -> void:
+	print("10) Ajustes y actualización")
+	var lv := await new_level()
+	check(lv.hud.version_text != "", "hay texto de versión (%s)" % lv.hud.version_text)
+	touch(lv, 3, lv.hud.button_center("settings"), true)
+	touch(lv, 3, lv.hud.button_center("settings"), false)
+	check(lv.hud.settings_visible and paused, "el botón ⚙ abre Ajustes y pausa el juego")
+	var u := lv.hud.settings_rect("update").get_center()
+	touch(lv, 4, u, true)
+	touch(lv, 4, u, false)
+	check(lv.update_opened, "«Buscar actualización» abre la descarga")
+	var c := lv.hud.settings_rect("close").get_center()
+	touch(lv, 5, c, true)
+	touch(lv, 5, c, false)
+	check(not lv.hud.settings_visible and not paused, "«Cerrar» reanuda el juego")
 	await free_level(lv)

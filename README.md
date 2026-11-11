@@ -7,6 +7,8 @@ Demo de «La subasta a oscuras» (2–4 min), acción y terror portuario en terc
 2. Descarga `el-turno-de-la-sal.apk`.
 3. Ábrelo y permite «instalar apps desconocidas» para el navegador cuando Android lo pida. Se reemplaza en cada build, así que desinstala la versión anterior si la firma cambia.
 
+Para actualizar: en el juego abre ⚙ Ajustes → «Buscar actualización» (abre el release en el navegador; descarga el APK y ábrelo). Android pide confirmar la instalación; no puede hacerse en silencio.
+
 El APK lo compila GitHub Actions (`.github/workflows/android.yml`) en cada push a `main` o a mano con *Run workflow*.
 
 ## Cómo se juega

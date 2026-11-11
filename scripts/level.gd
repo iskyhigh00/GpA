@@ -20,6 +20,7 @@ const NAV_POINTS: Array[Vector3] = [
 	Vector3(7.0, 0.1, -6.5), Vector3(11.0, 0.1, -6.5),
 	Vector3(7.0, 0.1, 6.5), Vector3(11.0, 0.1, 6.5),
 ]
+const RELEASE_URL := "https://github.com/iskyhigh00/GpA/releases/tag/latest"
 const WALL := Color(0.34, 0.39, 0.44)
 
 var phase: Phase = Phase.TUTORIAL
@@ -39,6 +40,7 @@ var grate_light: OmniLight3D
 var grate_steam: GPUParticles3D
 var music_player: AudioStreamPlayer
 var hitstop_t := 0.0
+var update_opened := false
 
 var reserve := MAX_RESERVE
 var ampoules := 0
@@ -478,6 +480,7 @@ func _build_hud() -> void:
 	hud.ampoule_pressed.connect(use_ampoule)
 	hud.restart_pressed.connect(request_restart)
 	hud.play_again_pressed.connect(_play_again)
+	hud.update_pressed.connect(_open_update)
 
 
 # ---------------------------------------------------------------- utilidades
@@ -723,6 +726,12 @@ func finish() -> void:
 	hud.show_end(lines)
 	hud.objective = ""
 	hud.prompts = []
+
+
+func _open_update() -> void:
+	update_opened = true
+	if not Gfx.headless:
+		OS.shell_open(RELEASE_URL)
 
 
 func _play_again() -> void:

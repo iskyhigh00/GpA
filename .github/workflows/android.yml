@@ -82,6 +82,9 @@ jobs:
             echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android"
           } >> "$GITHUB_ENV"
 
+      - name: Registrar versión
+        run: echo "${GITHUB_SHA::7} · build ${GITHUB_RUN_NUMBER}" > version.txt
+
       - name: Importar proyecto
         run: |
           godot --headless --path . --import || godot --headless --path . --import

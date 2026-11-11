@@ -9,6 +9,8 @@ signal force_pressed
 signal action_pressed
 signal ampoule_pressed
 signal restart_pressed
+signal settings_toggled(open: bool)
+signal update_pressed
 signal play_again_pressed
 signal cam_dragged(delta: Vector2)
 
@@ -43,10 +45,15 @@ var end_visible := false
 var end_lines: Array[String] = []
 var time := 0.0
 var vignette: GradientTexture2D
+var settings_visible := false
+var version_text := "dev"
 
 
 func _ready() -> void:
 	layer = 10
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	if FileAccess.file_exists("res://version.txt"):
+		version_text = FileAccess.get_file_as_string("res://version.txt").strip_edges()
 	font = ThemeDB.fallback_font
 	canvas = Control.new()
 	canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -79,6 +86,7 @@ func buttons() -> Dictionary:
 		"action": {"c": Vector2(vs.x - 190.0, vs.y - 285.0), "r": 46.0, "t": "ACCIÓN"},
 		"ampoule": {"c": Vector2(vs.x - 75.0, vs.y - 285.0), "r": 46.0, "t": "AMPOLLA"},
 		"restart": {"c": Vector2(vs.x - 44.0, 44.0), "r": 26.0, "t": "↻"},
+		"settings": {"c": Vector2(vs.x - 104.0, 44.0), "r": 26.0, "t": "⚙"},
 	}
 
 
@@ -90,6 +98,23 @@ func button_center(bname: String) -> Vector2:
 func play_again_rect() -> Rect2:
 	var vs := view_size()
 	return Rect2(vs.x * 0.5 - 160.0, vs.y * 0.5 + 110.0, 320.0, 76.0)
+
+
+func settings_rect(which: String) -> Rect2:
+	var vs := view_size()
+	if which == "update":
+		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 10.0, 400.0, 70.0)
+	return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 100.0, 400.0, 60.0)
+
+
+func set_settings(open: bool) -> void:
+	settings_visible = open
+	get_tree().paused = open
+	touches.clear()
+	stick_index = -1
+	move_vec = Vector2.ZERO
+	held.clear()
+	settings_toggled.emit(open)
 
 
 func say(text: String, secs: float = 3.5) -> void:
@@ -150,7 +175,16 @@ func _press(index: int, pos: Vector2) -> void:
 		if play_again_rect().has_point(pos):
 			play_again_pressed.emit()
 		return
+	if settings_visible:
+		if settings_rect("update").has_point(pos):
+			update_pressed.emit()
+		elif settings_rect("close").has_point(pos) or not Rect2(view_size() * 0.5 - Vector2(260, 190), Vector2(520, 380)).has_point(pos):
+			set_settings(false)
+		return
 	var bname := _hit_button(pos)
+	if bname == "settings":
+		set_settings(true)
+		return
 	if bname != "":
 		touches[index] = {"role": "btn", "name": bname}
 		held[bname] = int(held.get(bname, 0)) + 1
@@ -226,6 +260,8 @@ func _draw_ui() -> void:
 		canvas.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.05, 0.0, 0.0, fade))
 	if end_visible:
 		_draw_end(vs)
+	if settings_visible:
+		_draw_settings(vs)
 
 
 func _draw_bar() -> void:
@@ -311,3 +347,22 @@ func _draw_end(vs: Vector2) -> void:
 	canvas.draw_rect(r, Color(0.25, 0.45, 0.6, 0.95))
 	canvas.draw_rect(r, Color(1, 1, 1, 0.8), false, 3.0)
 	_text(Vector2(r.position.x, r.position.y + 48.0), "Jugar de nuevo", 30, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+
+
+func _draw_settings(vs: Vector2) -> void:
+	canvas.draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.6))
+	var panel := Rect2(vs * 0.5 - Vector2(260, 190), Vector2(520, 380))
+	canvas.draw_rect(panel, Color(0.06, 0.09, 0.12, 0.96))
+	canvas.draw_rect(panel, Color(1, 1, 1, 0.5), false, 3.0)
+	_text(Vector2(panel.position.x, panel.position.y + 52.0), "AJUSTES", 36, Color(0.95, 0.9, 0.7), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
+	_text(Vector2(panel.position.x, panel.position.y + 100.0), "Versión instalada:", 22, Color(0.8, 0.85, 0.95), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
+	_text(Vector2(panel.position.x, panel.position.y + 134.0), version_text, 26, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
+	var u := settings_rect("update")
+	canvas.draw_rect(u, Color(0.25, 0.45, 0.6, 0.95))
+	canvas.draw_rect(u, Color(1, 1, 1, 0.8), false, 3.0)
+	_text(Vector2(u.position.x, u.position.y + 44.0), "Buscar actualización", 28, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, u.size.x)
+	_text(Vector2(panel.position.x, u.position.y - 14.0), "Abre la descarga en el navegador; toca el APK para instalar.", 17, Color(0.75, 0.8, 0.85), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
+	var c := settings_rect("close")
+	canvas.draw_rect(c, Color(0.3, 0.3, 0.3, 0.9))
+	canvas.draw_rect(c, Color(1, 1, 1, 0.6), false, 2.0)
+	_text(Vector2(c.position.x, c.position.y + 40.0), "Cerrar", 26, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, c.size.x)
