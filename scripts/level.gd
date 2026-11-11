@@ -41,6 +41,7 @@ var grate_steam: GPUParticles3D
 var music_player: AudioStreamPlayer
 var hitstop_t := 0.0
 var update_opened := false
+var updater: Updater
 
 var reserve := MAX_RESERVE
 var ampoules := 0
@@ -624,7 +625,13 @@ func _build_hud() -> void:
 	hud.ampoule_pressed.connect(use_ampoule)
 	hud.restart_pressed.connect(request_restart)
 	hud.play_again_pressed.connect(_play_again)
-	hud.update_pressed.connect(_open_update)
+	hud.browser_pressed.connect(_open_update)
+	updater = Updater.new()
+	add_child(updater)
+	updater.set_installed(hud.version_text)
+	hud.updater = updater
+	hud.update_pressed.connect(updater.act)
+	hud.settings_toggled.connect(_on_settings_toggled)
 
 
 # ---------------------------------------------------------------- utilidades
@@ -870,6 +877,11 @@ func finish() -> void:
 	hud.show_end(lines)
 	hud.objective = ""
 	hud.prompts = []
+
+
+func _on_settings_toggled(open: bool) -> void:
+	if open and updater.state == Updater.S.IDLE:
+		updater.check()
 
 
 func _open_update() -> void:

@@ -11,6 +11,7 @@ signal ampoule_pressed
 signal restart_pressed
 signal settings_toggled(open: bool)
 signal update_pressed
+signal browser_pressed
 signal play_again_pressed
 signal cam_dragged(delta: Vector2)
 
@@ -47,6 +48,7 @@ var time := 0.0
 var vignette: GradientTexture2D
 var settings_visible := false
 var version_text := "dev"
+var updater: Updater
 
 
 func _ready() -> void:
@@ -103,8 +105,10 @@ func play_again_rect() -> Rect2:
 func settings_rect(which: String) -> Rect2:
 	var vs := view_size()
 	if which == "update":
-		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 10.0, 400.0, 70.0)
-	return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 100.0, 400.0, 60.0)
+		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 10.0, 400.0, 64.0)
+	if which == "browser":
+		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 82.0, 400.0, 44.0)
+	return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 134.0, 400.0, 44.0)
 
 
 func set_settings(open: bool) -> void:
@@ -178,6 +182,8 @@ func _press(index: int, pos: Vector2) -> void:
 	if settings_visible:
 		if settings_rect("update").has_point(pos):
 			update_pressed.emit()
+		elif settings_rect("browser").has_point(pos):
+			browser_pressed.emit()
 		elif settings_rect("close").has_point(pos) or not Rect2(view_size() * 0.5 - Vector2(260, 190), Vector2(520, 380)).has_point(pos):
 			set_settings(false)
 		return
@@ -357,12 +363,20 @@ func _draw_settings(vs: Vector2) -> void:
 	_text(Vector2(panel.position.x, panel.position.y + 52.0), "AJUSTES", 36, Color(0.95, 0.9, 0.7), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
 	_text(Vector2(panel.position.x, panel.position.y + 100.0), "Versión instalada:", 22, Color(0.8, 0.85, 0.95), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
 	_text(Vector2(panel.position.x, panel.position.y + 134.0), version_text, 26, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
+	var status_text := updater.status if updater else ""
+	_text(Vector2(panel.position.x, panel.position.y + 176.0), status_text, 18, Color(0.85, 0.9, 0.7), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
 	var u := settings_rect("update")
 	canvas.draw_rect(u, Color(0.25, 0.45, 0.6, 0.95))
+	if updater and updater.state == Updater.S.DOWNLOADING:
+		canvas.draw_rect(Rect2(u.position, Vector2(u.size.x * updater.progress, u.size.y)), Color(0.3, 0.7, 0.5, 0.9))
 	canvas.draw_rect(u, Color(1, 1, 1, 0.8), false, 3.0)
-	_text(Vector2(u.position.x, u.position.y + 44.0), "Buscar actualización", 28, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, u.size.x)
-	_text(Vector2(panel.position.x, u.position.y - 14.0), "Abre la descarga en el navegador; toca el APK para instalar.", 17, Color(0.75, 0.8, 0.85), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
+	var label := updater.button_label() if updater else "Buscar actualización"
+	_text(Vector2(u.position.x, u.position.y + 42.0), label, 26, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, u.size.x)
+	var br := settings_rect("browser")
+	canvas.draw_rect(br, Color(0.2, 0.25, 0.3, 0.9))
+	canvas.draw_rect(br, Color(1, 1, 1, 0.5), false, 2.0)
+	_text(Vector2(br.position.x, br.position.y + 31.0), "Abrir en el navegador", 20, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, br.size.x)
 	var c := settings_rect("close")
 	canvas.draw_rect(c, Color(0.3, 0.3, 0.3, 0.9))
 	canvas.draw_rect(c, Color(1, 1, 1, 0.6), false, 2.0)
-	_text(Vector2(c.position.x, c.position.y + 40.0), "Cerrar", 26, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, c.size.x)
+	_text(Vector2(c.position.x, c.position.y + 31.0), "Cerrar", 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, c.size.x)

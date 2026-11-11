@@ -3,3 +3,4 @@ build/
 *.apk
 *.aab
 *.keystore
+!ci/debug.keystore
