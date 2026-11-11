@@ -25,6 +25,7 @@ func _run() -> void:
 	await _t11_models()
 	await _t12_docs()
 	await _t13_audio()
+	await _t14_quality()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -509,4 +510,31 @@ func _t13_audio() -> void:
 	check(lv.variants.has("step") and (lv.variants["step"] as Array).size() == 3, "tres variantes de pasos")
 	check(lv.sounds["beep"] == lv._ld("campana"), "la señal de la lámpara usa la campana de subasta")
 	check(lv.sounds["clang"] == lv._ld("clang"), "la bandeja usa el golpe metálico real")
+	await free_level(lv)
+
+
+func _t14_quality() -> void:
+	print("14) Calidad gráfica")
+	var lv := await new_level()
+	var before := Quality.level
+	Quality.level = 1
+	touch(lv, 3, lv.hud.button_center("settings"), true)
+	touch(lv, 3, lv.hud.button_center("settings"), false)
+	var q := lv.hud.settings_rect("quality").get_center()
+	touch(lv, 4, q, true)
+	touch(lv, 4, q, false)
+	check(Quality.level == 2 and lv.hud.settings_visible, "el botón cambia a Alta sin cerrar Ajustes")
+	check(is_equal_approx(lv.get_viewport().scaling_3d_scale, 1.0) and lv.quality_env.glow_enabled, "Alta: 3D al 100% y brillo activo")
+	touch(lv, 5, q, true)
+	touch(lv, 5, q, false)
+	check(Quality.level == 0 and is_equal_approx(lv.get_viewport().scaling_3d_scale, 0.6) and not lv.quality_env.glow_enabled, "Baja: 3D al 60% y sin brillo")
+	touch(lv, 6, q, true)
+	touch(lv, 6, q, false)
+	check(Quality.level == 1 and Engine.max_fps == 40, "Media: 40 FPS")
+	Quality.level = before
+	Quality.save()
+	var cf := ConfigFile.new()
+	check(cf.load(Quality.SAVE_PATH) == OK and int(cf.get_value("grafico", "nivel")) == before, "la elección se guarda")
+	touch(lv, 7, lv.hud.settings_rect("close").get_center(), true)
+	touch(lv, 7, lv.hud.settings_rect("close").get_center(), false)
 	await free_level(lv)

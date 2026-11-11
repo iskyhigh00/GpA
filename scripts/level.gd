@@ -51,6 +51,7 @@ var breath_cd := 0.0
 var was_low := false
 var hitstop_t := 0.0
 var update_opened := false
+var quality_env: Environment
 var updater: Updater
 
 var reserve := MAX_RESERVE
@@ -100,6 +101,8 @@ func _ready() -> void:
 		add_child(ap)
 		pool.append(ap)
 	_build_environment()
+	Quality.load_saved()
+	Quality.apply(get_viewport(), quality_env)
 	_build_world()
 	_build_entities()
 	_build_hud()
@@ -138,6 +141,7 @@ func _build_environment() -> void:
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.12
 	env.adjustment_saturation = 0.88
+	quality_env = env
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -328,6 +332,78 @@ func _window(pos: Vector3, rot_y: float, c: Color, beam_to: Vector3) -> void:
 	sp.look_at(beam_to, Vector3.RIGHT)
 
 
+func _cot(pos: Vector3) -> void:
+	var b := StaticBody3D.new()
+	b.position = pos
+	b.collision_layer = 2
+	var cs := CollisionShape3D.new()
+	var sh := BoxShape3D.new()
+	sh.size = Vector3(2.0, 0.8, 0.9)
+	cs.shape = sh
+	b.add_child(cs)
+	var metal := Gfx.mat_gloss(Color(0.55, 0.57, 0.6), 0.3)
+	for sx in [-0.9, 0.9]:
+		for sz in [-0.38, 0.38]:
+			var leg := Gfx.cyl_m(0.03, 0.62, metal)
+			leg.position = Vector3(sx, -0.08, sz)
+			b.add_child(leg)
+	var frame := Gfx.box_m(Vector3(2.0, 0.05, 0.86), metal)
+	frame.position = Vector3(0.0, 0.24, 0.0)
+	b.add_child(frame)
+	var mattress := Gfx.box_m(Vector3(1.94, 0.14, 0.8), Gfx.mat_cloth(Color(0.78, 0.76, 0.68)))
+	mattress.position = Vector3(0.0, 0.33, 0.0)
+	b.add_child(mattress)
+	var pillow := Gfx.box_m(Vector3(0.4, 0.12, 0.55), Gfx.mat_cloth(Color(0.85, 0.84, 0.78)))
+	pillow.position = Vector3(-0.7, 0.45, 0.0)
+	b.add_child(pillow)
+	var blanket := Gfx.box_m(Vector3(1.15, 0.12, 0.88), Gfx.mat_cloth(Color(0.32, 0.1, 0.12)))
+	blanket.position = Vector3(0.3, 0.46, 0.0)
+	blanket.rotation_degrees.y = 2.0
+	b.add_child(blanket)
+	var drape := Gfx.box_m(Vector3(1.15, 0.5, 0.05), Gfx.mat_cloth(Color(0.32, 0.1, 0.12)))
+	drape.position = Vector3(0.3, 0.28, 0.46)
+	b.add_child(drape)
+	add_child(b)
+
+
+func _consultorio_details() -> void:
+	# Estantes con frascos en el muro sur del consultorio.
+	var wood := Gfx.mat_wood()
+	var cols: Array[Color] = [Color(0.2, 0.5, 0.3), Color(0.75, 0.5, 0.15), Color(0.7, 0.12, 0.18), Color(0.6, 0.7, 0.75)]
+	for lvl in [1.25, 1.8]:
+		var board := Gfx.box_m(Vector3(3.2, 0.06, 0.32), wood)
+		board.position = Vector3(-12.8, lvl, 3.82)
+		add_child(board)
+		for i in 9:
+			var bottle := Gfx.cyl_m(0.05 + 0.01 * (i % 3), 0.2 + 0.05 * (i % 4), Gfx.mat_glow(cols[i % 4], 0.5))
+			bottle.position = Vector3(-14.2 + i * 0.34, lvl + 0.14, 3.82)
+			add_child(bottle)
+	# Tubo neumático de latón por el que Sira mandó la copia.
+	var brass := Gfx.mat_gloss(Color(0.72, 0.52, 0.22), 0.3)
+	var vtube := Gfx.cyl_m(0.07, 2.9, brass)
+	vtube.position = Vector3(-14.8, 1.55, -3.75)
+	add_child(vtube)
+	var htube := Gfx.cyl_m(0.07, 9.3, brass)
+	htube.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+	htube.position = Vector3(-10.15, 3.0, -3.75)
+	add_child(htube)
+	for x in [-13.0, -9.5, -6.0]:
+		var clamp_b := Gfx.box_m(Vector3(0.1, 0.22, 0.12), Gfx.mat_gloss(Color(0.1, 0.1, 0.11), 0.5))
+		clamp_b.position = Vector3(x, 3.0, -3.78)
+		add_child(clamp_b)
+	var canister := Gfx.cyl_m(0.1, 0.34, Gfx.mat_gloss(Color(0.55, 0.38, 0.15), 0.35))
+	canister.position = Vector3(-14.8, 0.45, -3.75)
+	add_child(canister)
+	_sign("TUBO NEUMÁTICO", Vector3(-12.5, 2.55, -3.95), 0.0, Color(0.85, 0.8, 0.6), 0.006)
+	# Palangana y cortina sucia junto a la ventana.
+	var basin := Gfx.cyl_m(0.28, 0.18, Gfx.mat_gloss(Color(0.75, 0.77, 0.8), 0.25), 0.2)
+	basin.position = Vector3(-14.3, 0.95, 1.3)
+	add_child(basin)
+	var stand := Gfx.cyl_m(0.04, 0.85, Gfx.mat_gloss(Color(0.5, 0.52, 0.55), 0.3))
+	stand.position = Vector3(-14.3, 0.45, 1.3)
+	add_child(stand)
+
+
 func _build_gothic() -> void:
 	# Arcos sobre los dos pasos del muro divisor.
 	_arch(DIVIDER_X, -6.5)
@@ -512,10 +588,8 @@ func _build_world() -> void:
 	door_body.add_child(handle)
 	add_child(door_body)
 	# Consultorio: camilla, mesa con ampollas, armario, ventana.
-	var cot := Gfx.prop_box(self, Vector3(-12.5, 0.4, -2.5), Vector3(2.0, 0.8, 0.9), Color(0.8, 0.82, 0.85))
-	var blanket := Gfx.box_m(Vector3(1.2, 0.12, 0.95), Gfx.mat_cloth(Color(0.35, 0.12, 0.14)))
-	blanket.position = Vector3(0.35, 0.44, 0.0)
-	cot.add_child(blanket)
+	_cot(Vector3(-12.5, 0.4, -2.5))
+	_consultorio_details()
 	var desk := Gfx.solid_m(self, Vector3(-13.5, 0.5, 2.8), Vector3(1.6, 1.0, 0.8), Gfx.mat_wood(), 2)
 	for i in 3:
 		var vial := Gfx.cyl_m(0.04, 0.16, Gfx.mat_glow(Color(0.85, 0.1, 0.2), 1.2))
@@ -630,6 +704,7 @@ func _build_hud() -> void:
 	hud.restart_pressed.connect(request_restart)
 	hud.play_again_pressed.connect(_play_again)
 	hud.browser_pressed.connect(_open_update)
+	hud.quality_pressed.connect(_cycle_quality)
 	updater = Updater.new()
 	add_child(updater)
 	updater.set_installed(hud.version_text)
@@ -950,6 +1025,11 @@ func finish() -> void:
 	hud.show_end(lines)
 	hud.objective = ""
 	hud.prompts = []
+
+
+func _cycle_quality() -> void:
+	Quality.cycle()
+	Quality.apply(get_viewport(), quality_env)
 
 
 func _on_settings_toggled(open: bool) -> void:

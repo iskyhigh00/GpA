@@ -482,7 +482,7 @@ func _update_cone() -> void:
 	cone.visible = true
 	var ratio := clampf(detect / DETECT_TIME, 0.0, 1.0)
 	if state == S.CHASE:
-		cone_mat.albedo_color = Color(1.0, 0.15, 0.15, 0.4)
+		cone_mat.albedo_color = Color(1.0, 0.15, 0.15, 0.1)
 	else:
 		cone_mat.albedo_color = Color(1.0, 0.9, 0.3, 0.22).lerp(Color(1.0, 0.25, 0.2, 0.42), ratio)
 	var origin := global_position + Vector3(0.0, 0.6, 0.0)

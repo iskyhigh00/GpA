@@ -13,6 +13,7 @@ signal settings_toggled(open: bool)
 signal docs_toggled(open: bool)
 signal update_pressed
 signal browser_pressed
+signal quality_pressed
 signal play_again_pressed
 signal cam_dragged(delta: Vector2)
 
@@ -106,10 +107,16 @@ func play_again_rect() -> Rect2:
 	return Rect2(vs.x * 0.5 - 160.0, vs.y * 0.5 + 110.0, 320.0, 76.0)
 
 
+func settings_panel() -> Rect2:
+	return Rect2(view_size() * 0.5 - Vector2(260, 230), Vector2(520, 460))
+
+
 func settings_rect(which: String) -> Rect2:
 	var vs := view_size()
 	if which == "update":
 		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 10.0, 400.0, 64.0)
+	if which == "quality":
+		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 - 84.0, 400.0, 48.0)
 	if which == "browser":
 		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 82.0, 400.0, 44.0)
 	return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 134.0, 400.0, 44.0)
@@ -234,9 +241,11 @@ func _press(index: int, pos: Vector2) -> void:
 	if settings_visible:
 		if settings_rect("update").has_point(pos):
 			update_pressed.emit()
+		elif settings_rect("quality").has_point(pos):
+			quality_pressed.emit()
 		elif settings_rect("browser").has_point(pos):
 			browser_pressed.emit()
-		elif settings_rect("close").has_point(pos) or not Rect2(view_size() * 0.5 - Vector2(260, 190), Vector2(520, 380)).has_point(pos):
+		elif settings_rect("close").has_point(pos) or not settings_panel().has_point(pos):
 			set_settings(false)
 		return
 	var bname := _hit_button(pos)
@@ -410,14 +419,19 @@ func _draw_end(vs: Vector2) -> void:
 
 func _draw_settings(vs: Vector2) -> void:
 	canvas.draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.6))
-	var panel := Rect2(vs * 0.5 - Vector2(260, 190), Vector2(520, 380))
+	var panel := settings_panel()
 	canvas.draw_rect(panel, Color(0.06, 0.09, 0.12, 0.96))
 	canvas.draw_rect(panel, Color(1, 1, 1, 0.5), false, 3.0)
 	_text(Vector2(panel.position.x, panel.position.y + 52.0), "AJUSTES", 36, Color(0.95, 0.9, 0.7), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
 	_text(Vector2(panel.position.x, panel.position.y + 100.0), "Versión instalada:", 22, Color(0.8, 0.85, 0.95), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
 	_text(Vector2(panel.position.x, panel.position.y + 134.0), version_text, 26, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
+	var qr := settings_rect("quality")
+	canvas.draw_rect(qr, Color(0.3, 0.25, 0.4, 0.95))
+	canvas.draw_rect(qr, Color(1, 1, 1, 0.8), false, 3.0)
+	_text(Vector2(qr.position.x, qr.position.y + 32.0), Quality.label(), 24, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, qr.size.x)
+	_text(Vector2(panel.position.x, qr.end.y + 19.0), Quality.DETAIL[Quality.level], 15, Color(0.75, 0.8, 0.85), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
 	var status_text := updater.status if updater else ""
-	_text(Vector2(panel.position.x, panel.position.y + 176.0), status_text, 18, Color(0.85, 0.9, 0.7), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
+	_text(Vector2(panel.position.x, panel.position.y + 228.0), status_text, 18, Color(0.85, 0.9, 0.7), HORIZONTAL_ALIGNMENT_CENTER, panel.size.x)
 	var u := settings_rect("update")
 	canvas.draw_rect(u, Color(0.25, 0.45, 0.6, 0.95))
 	if updater and updater.state == Updater.S.DOWNLOADING:

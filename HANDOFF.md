@@ -32,6 +32,10 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `level.gd`: `_start_audio()` carga y sustituye los sintetizados (`beep`=campana, `clang`, `tray_roll`, `ice`, `cart_roll`, `gong`, `grate`, pasos en 3 variantes). Ambiente: 5 capas en bucle (mercado, olas, bomba, goteo, silbato). Reserva ≤ 35: latido que sube de volumen y una respiración (cada 30 s como máximo).
 - Siguen sintetizados (`sfx.gd`): hit, swish, dodge, block, slam, pickup, alarm, perfect, door, push. En headless no se reproduce nada.
 
+## Calidad gráfica elegible
+- `scripts/quality.gd`: Baja (3D 60%, 30 FPS), Media (70%, 40 FPS, por defecto) y Alta (100%, 60 FPS, brillo y MSAA 2x). Botón en Ajustes; se guarda en `user://calidad.cfg`. Richi dijo que el juego se ve «mediocre»: probar Alta en el celu y decidir si el calor es aceptable.
+- Consultorio con camilla armada, estantes con frascos, tubo neumático de latón y palangana. El cono de visión del guardia casi no se ve durante la persecución.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.
