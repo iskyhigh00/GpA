@@ -45,6 +45,9 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `scripts/character_style.gd`: recolorea por nombre de material (los modelos usan color plano por pieza) y añade accesorios en huesos (en Torso/Chest/Neck/Head +Y arriba, +Z al frente, +X izquierda). Sira: abrigo largo con vaivén (`rig.coat`), bufanda, cuello, correa, cinturón, bolsas, coleta. Guardia: mochila oculta, casco con visera y cubrenuca, chaleco con bandas reflectantes, hombreras, farol con luz y llaves.
 - Falta: gancho/bastón con mejor forma, combo con `Punch_*`, animación `Death`, caras con más detalle, rostros distintos para Tesa/Ivo/Roque.
 
+## Recursos del zip de ChatGPT (integrados)
+- Texturas: `brick_wall_10` (muro divisor), `metal_063` (tuberías y carro), `moss_wood` (puestos y cajones). Sonidos (preescuchas LQ de Freesound, CC0; originales pendientes por login): impacto del gancho, golpe recibido, bloqueo, caída (al morir) y puerta (abre). `puerta_cierra` está en `assets/audio/juego/` sin usar. Fuentes y licencias en `assets/LEEME_extra.txt`.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

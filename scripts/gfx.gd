@@ -222,6 +222,21 @@ static func mat_plaster() -> BaseMaterial3D:
 	return m if m else _tri("plaster", 14, Color(0.3, 0.3, 0.27), Color(0.58, 0.56, 0.5), 0.9, 0.0, 0.02, 0.3)
 
 
+static func mat_brick() -> BaseMaterial3D:
+	var m := _pbr("brick", "brick_wall_10", "brick_wall_10", "1k", 0.45, 0.0)
+	return m if m else mat_stone()
+
+
+static func mat_steel() -> BaseMaterial3D:
+	var m := _pbr("steel", "metal_063", "metal_063", "1k", 0.7, 0.12)
+	return m if m else mat_rust()
+
+
+static func mat_mossy() -> BaseMaterial3D:
+	var m := _pbr("mossy", "moss_wood", "moss_wood", "1k", 0.5, 0.0)
+	return m if m else mat_wood()
+
+
 static func mat_plate() -> BaseMaterial3D:
 	var m := _pbr("plate", "metal_plate", "metal_plate", "1k", 0.8, 0.12)
 	return m if m else mat_rust()

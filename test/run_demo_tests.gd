@@ -520,6 +520,11 @@ func _t13_audio() -> void:
 	check(lv.variants.has("step") and (lv.variants["step"] as Array).size() == 3, "tres variantes de pasos")
 	check(lv.sounds["beep"] == lv._ld("campana"), "la señal de la lámpara usa la campana de subasta")
 	check(lv.sounds["clang"] == lv._ld("clang"), "la bandeja usa el golpe metálico real")
+	for n in ["impacto_gancho", "golpe_recibido", "bloqueo", "caida", "puerta_abre", "puerta_cierra"]:
+		check(lv._ld(n) != null, "existe el sonido de combate/puerta «%s»" % n)
+	check(lv.sounds["hook_hit"] == lv._ld("impacto_gancho") and lv.sounds["hurt"] == lv._ld("golpe_recibido"), "impacto del gancho y golpe recibido son reales")
+	for m in [Gfx.mat_brick(), Gfx.mat_steel(), Gfx.mat_mossy()]:
+		check(m is ORMMaterial3D, "textura PBR nueva cargada")
 	await free_level(lv)
 
 

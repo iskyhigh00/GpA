@@ -177,7 +177,7 @@ func _wall(cx: float, cz: float, sx: float, sz: float, m: Material = null) -> vo
 
 
 func _pipe_x(x0: float, x1: float, y: float, z: float, r: float) -> void:
-	var p := Gfx.cyl_m(r, absf(x1 - x0), Gfx.mat_rust())
+	var p := Gfx.cyl_m(r, absf(x1 - x0), Gfx.mat_steel())
 	p.rotation_degrees = Vector3(0.0, 0.0, 90.0)
 	p.position = Vector3((x0 + x1) * 0.5, y, z)
 	add_child(p)
@@ -210,7 +210,7 @@ func _barrel(x: float, z: float) -> void:
 
 
 func _crate(pos: Vector3, size: Vector3) -> void:
-	var b := Gfx.solid_m(self, pos, size, Gfx.mat_wood(), 2)
+	var b := Gfx.solid_m(self, pos, size, Gfx.mat_mossy(), 2)
 	for sy in [-1.0, 1.0]:
 		var slat := Gfx.box_m(Vector3(size.x + 0.04, 0.07, size.z + 0.04), Gfx.mat_gloss(Color(0.1, 0.07, 0.05), 0.7))
 		slat.position = Vector3(0.0, sy * (size.y * 0.5 - 0.05), 0.0)
@@ -218,7 +218,7 @@ func _crate(pos: Vector3, size: Vector3) -> void:
 
 
 func _stall(pos: Vector3, size: Vector3) -> void:
-	var b := Gfx.solid_m(self, pos, size, Gfx.mat_wood(), 2)
+	var b := Gfx.solid_m(self, pos, size, Gfx.mat_mossy(), 2)
 	var ice := Gfx.box_m(Vector3(size.x * 0.9, 0.12, size.z * 0.85), Gfx.mat_gloss(Color(0.6, 0.8, 0.9), 0.15))
 	ice.position = Vector3(0.0, size.y * 0.5 + 0.06, 0.0)
 	b.add_child(ice)
@@ -569,9 +569,9 @@ func _build_world() -> void:
 	_wall(-5.0, -5.7, 0.4, 9.0)
 	_wall(-5.0, 5.7, 0.4, 9.0)
 	# Muro divisor con paso norte (z -8..-5) y paso sur (z 5..8).
-	_wall(DIVIDER_X, -9.0, 0.4, 2.0)
-	_wall(DIVIDER_X, 0.0, 0.4, 10.0)
-	_wall(DIVIDER_X, 9.0, 0.4, 2.0)
+	_wall(DIVIDER_X, -9.0, 0.4, 2.0, Gfx.mat_brick())
+	_wall(DIVIDER_X, 0.0, 0.4, 10.0, Gfx.mat_brick())
+	_wall(DIVIDER_X, 9.0, 0.4, 2.0, Gfx.mat_brick())
 	# Pilastras en el muro norte y este (no estorban las rutas).
 	for x in [-2.0, 3.0, 13.0, 19.0]:
 		Gfx.solid_m(self, Vector3(x, 1.6, -9.75), Vector3(0.7, 3.2, 0.5), Gfx.mat_rock(), 1)
@@ -731,7 +731,7 @@ func _loop_player(stream: AudioStream, db: float) -> AudioStreamPlayer:
 
 ## Sonidos reales (assets/audio/juego); lo que no tenga archivo sigue usando el sintetizado.
 func _start_audio() -> void:
-	var over := {"beep": "campana", "clang": "clang", "tray_roll": "bandeja_rueda", "ice": "hielo", "cart_roll": "carro_rueda", "gong": "gong", "grate": "rejilla"}
+	var over := {"beep": "campana", "clang": "clang", "tray_roll": "bandeja_rueda", "ice": "hielo", "cart_roll": "carro_rueda", "gong": "gong", "grate": "rejilla", "hook_hit": "impacto_gancho", "hurt": "golpe_recibido", "block": "bloqueo", "body_fall": "caida", "door": "puerta_abre", "door_shut": "puerta_cierra"}
 	for key: String in over:
 		var st := _ld(str(over[key]))
 		if st:
@@ -862,13 +862,13 @@ func hurt_player(dmg: float) -> void:
 	player.add_shake(0.35)
 	player.flinch()
 	hud.flash = 1.0
-	play("hit")
+	play("hurt")
 	spend(dmg)
 
 
 func on_guard_hit(_hits: int, pos: Vector3) -> void:
 	combat = true
-	play("hit")
+	play("hook_hit")
 	hitstop_t = 0.1
 	player.add_shake(0.3)
 	spark(pos)
@@ -974,6 +974,7 @@ func die() -> void:
 	player.locked = true
 	hud.fade_target = 1.0
 	hud.flash = 1.0
+	play("body_fall")
 	hud.say("Sin reserva. Vuelves al punto de control.", 2.5)
 
 
