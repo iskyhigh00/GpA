@@ -293,3 +293,16 @@ static func solid_m(parent: Node, pos: Vector3, size: Vector3, m: Material, laye
 
 static func no_shadow(mi: GeometryInstance3D) -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+static func torus_m(inner: float, outer: float, m: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = inner
+	tm.outer_radius = outer
+	tm.rings = 16
+	tm.ring_segments = 8
+	if not headless:
+		mi.mesh = tm
+	mi.material_override = m
+	return mi

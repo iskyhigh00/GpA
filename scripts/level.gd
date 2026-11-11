@@ -248,6 +248,122 @@ func _puddle(x: float, z: float, r: float) -> void:
 	add_child(p)
 
 
+func _arch(x: float, z0: float) -> void:
+	var stone := Gfx.mat_stone()
+	for sgn in [-1.0, 1.0]:
+		var slab := Gfx.box_m(Vector3(0.6, 0.32, 1.85), stone)
+		slab.position = Vector3(x, 2.88, z0 + sgn * 0.78)
+		slab.rotation_degrees.x = 31.0 * sgn
+		add_child(slab)
+		var spring := Gfx.box_m(Vector3(0.7, 0.3, 0.5), Gfx.mat_rust())
+		spring.position = Vector3(x, 2.3, z0 + sgn * 1.55)
+		add_child(spring)
+	var key := Gfx.box_m(Vector3(0.7, 0.4, 0.4), Gfx.mat_rust())
+	key.position = Vector3(x, 3.35, z0)
+	add_child(key)
+
+
+func _column(x: float, z: float) -> void:
+	var st := Gfx.mat_stone()
+	var b := Gfx.solid_m(self, Vector3(x, 1.4, z), Vector3(0.7, 2.8, 0.7), st, 2)
+	b.get_child(1).queue_free()
+	var base := Gfx.box_m(Vector3(1.0, 0.3, 1.0), st)
+	base.position = Vector3(0.0, -1.25, 0.0)
+	b.add_child(base)
+	var shaft := Gfx.cyl_m(0.3, 2.3, st, 0.34)
+	shaft.position = Vector3(0.0, 0.0, 0.0)
+	b.add_child(shaft)
+	var cap := Gfx.box_m(Vector3(0.9, 0.32, 0.9), st)
+	cap.position = Vector3(0.0, 1.2, 0.0)
+	b.add_child(cap)
+	for yy in [-0.7, 0.7]:
+		var ring := Gfx.cyl_m(0.36, 0.1, Gfx.mat_rust())
+		ring.position = Vector3(0.0, yy, 0.0)
+		b.add_child(ring)
+
+
+func _window(pos: Vector3, rot_y: float, c: Color, beam_to: Vector3) -> void:
+	var w := Node3D.new()
+	w.position = pos
+	w.rotation_degrees.y = rot_y
+	add_child(w)
+	var glass := Gfx.box_m(Vector3(1.1, 1.8, 0.06), Gfx.mat_glow(c, 1.8))
+	w.add_child(glass)
+	var frame := Gfx.mat_rust()
+	var v := Gfx.box_m(Vector3(0.08, 1.9, 0.1), frame)
+	w.add_child(v)
+	var h := Gfx.box_m(Vector3(1.2, 0.08, 0.1), frame)
+	h.position = Vector3(0.0, 0.2, 0.0)
+	w.add_child(h)
+	for sx in [-0.6, 0.6]:
+		var side := Gfx.box_m(Vector3(0.1, 1.9, 0.12), frame)
+		side.position = Vector3(sx, 0.0, 0.0)
+		w.add_child(side)
+	var top := Gfx.box_m(Vector3(0.9, 0.5, 0.1), frame)
+	top.position = Vector3(0.0, 1.0, 0.0)
+	top.rotation_degrees.z = 45.0
+	top.scale = Vector3(0.5, 0.5, 1.0)
+	w.add_child(top)
+	var ray := Gfx.beam(Color(c.r, c.g, c.b, 0.07))
+	Gfx.no_shadow(ray)
+	add_child(ray)
+	Gfx.place_beam(ray, pos + Vector3(0.0, 0.2, 0.0), beam_to, 0.9)
+	var sp := SpotLight3D.new()
+	sp.position = pos + Vector3(0.0, 0.0, 0.0)
+	sp.light_color = c
+	sp.light_energy = 2.0
+	sp.spot_range = 13.0
+	sp.spot_angle = 38.0
+	add_child(sp)
+	sp.look_at(beam_to, Vector3.RIGHT)
+
+
+func _build_gothic() -> void:
+	# Arcos sobre los dos pasos del muro divisor.
+	_arch(DIVIDER_X, -6.5)
+	_arch(DIVIDER_X, 6.5)
+	# Columnas fuera de las rutas.
+	for cp in [Vector2(4.5, 0.0), Vector2(11.5, -1.6), Vector2(11.5, 1.8), Vector2(19.0, -4.5)]:
+		_column(cp.x, cp.y)
+	# Vitrales con haces de luz sobre el muro norte.
+	_window(Vector3(0.5, 1.9, -9.94), 0.0, Color(0.35, 0.55, 1.0), Vector3(0.5, 0.0, -5.5))
+	_window(Vector3(6.0, 1.9, -9.94), 0.0, Color(1.0, 0.7, 0.3), Vector3(6.0, 0.0, -6.0))
+	_window(Vector3(16.0, 1.9, -9.94), 0.0, Color(0.9, 0.25, 0.3), Vector3(16.0, 0.0, -5.0))
+	_window(Vector3(-14.94, 1.9, 2.2), 90.0, Color(0.4, 0.6, 1.0), Vector3(-11.0, 0.0, 2.2))
+	# Rodapié oscuro y juntas de las losas del suelo.
+	var trim := Gfx.mat_gloss(Color(0.04, 0.04, 0.05), 0.5)
+	for t in [Vector4(9.0, -9.9, 28.0, 0.12), Vector4(9.0, 9.9, 28.0, 0.12)]:
+		var bt := Gfx.box_m(Vector3(t.z, 0.35, 0.2), trim)
+		bt.position = Vector3(t.x, 0.18, t.y)
+		add_child(bt)
+	for i in 15:
+		var seam := Gfx.box_m(Vector3(0.04, 0.012, 20.0), trim)
+		seam.position = Vector3(-4.0 + i * 2.0, 0.008, 0.0)
+		Gfx.no_shadow(seam)
+		add_child(seam)
+	for j in 9:
+		var seam2 := Gfx.box_m(Vector3(28.0, 0.012, 0.04), trim)
+		seam2.position = Vector3(9.0, 0.008, -8.0 + j * 2.0)
+		Gfx.no_shadow(seam2)
+		add_child(seam2)
+	# Cuerdas enrolladas, bolardos y cadenas.
+	for rp in [Vector3(21.2, 0.12, 7.5), Vector3(-3.5, 0.12, 9.2)]:
+		var rope := Gfx.torus_m(0.12, 0.42, Gfx.mat_cloth(Color(0.35, 0.27, 0.15)))
+		rope.position = rp
+		add_child(rope)
+	for bp in [Vector3(22.4, 0.0, 5.5), Vector3(22.4, 0.0, 8.0)]:
+		var bol := Gfx.cyl_m(0.14, 0.7, Gfx.mat_rust(), 0.2)
+		bol.position = bp + Vector3(0.0, 0.35, 0.0)
+		add_child(bol)
+		var head := Gfx.sphere_m(0.2, Gfx.mat_rust())
+		head.position = bp + Vector3(0.0, 0.72, 0.0)
+		add_child(head)
+	for cx in [2.0, 8.0, 14.0, 20.0]:
+		var chain := Gfx.cyl_m(0.02, 1.4, Gfx.mat_gloss(Color(0.06, 0.06, 0.06), 0.5))
+		chain.position = Vector3(cx, 2.5, -9.7)
+		add_child(chain)
+
+
 func _build_particles() -> void:
 	if Gfx.headless:
 		return
@@ -284,6 +400,33 @@ func _build_particles() -> void:
 	var sq := QuadMesh.new()
 	sq.size = Vector2(0.9, 0.9)
 	sq.material = sm
+	var mist := GPUParticles3D.new()
+	mist.amount = 36
+	mist.lifetime = 12.0
+	mist.preprocess = 12.0
+	mist.visibility_aabb = AABB(Vector3(-16.0, -1.0, -12.0), Vector3(32.0, 4.0, 24.0))
+	var mm := ParticleProcessMaterial.new()
+	mm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	mm.emission_box_extents = Vector3(14.0, 0.15, 9.0)
+	mm.direction = Vector3(1.0, 0.0, 0.2)
+	mm.spread = 25.0
+	mm.initial_velocity_min = 0.1
+	mm.initial_velocity_max = 0.3
+	mm.gravity = Vector3.ZERO
+	mm.scale_min = 2.0
+	mm.scale_max = 4.0
+	mist.process_material = mm
+	var mqm := StandardMaterial3D.new()
+	mqm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mqm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mqm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mqm.albedo_color = Color(0.55, 0.65, 0.75, 0.07)
+	var mq := QuadMesh.new()
+	mq.size = Vector2(2.0, 1.2)
+	mq.material = mqm
+	mist.draw_pass_1 = mq
+	mist.position = Vector3(9.0, 0.5, 0.0)
+	add_child(mist)
 	grate_steam = GPUParticles3D.new()
 	grate_steam.amount = 24
 	grate_steam.lifetime = 3.0
@@ -443,6 +586,7 @@ func _build_world() -> void:
 		bar.position = Vector3(-0.8 + i * 0.4, 0.06, 0.0)
 		grate_plate.add_child(bar)
 	add_child(grate_plate)
+	_build_gothic()
 	_build_particles()
 
 

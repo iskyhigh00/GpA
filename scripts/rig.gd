@@ -66,6 +66,20 @@ static func build(skin: Color, coat_c: Color, pants_c: Color, hair_c: Color, hea
 			r.arm_l = arm
 		else:
 			r.arm_r = arm
+	var belt := Gfx.cyl_m(0.27 * w, 0.1, Gfx.mat_gloss(Color(0.07, 0.05, 0.04), 0.5), 0.27 * w)
+	belt.position = Vector3(0.0, 0.08, 0.0)
+	r.body.add_child(belt)
+	var buckle := Gfx.box_m(Vector3(0.09, 0.09, 0.03), Gfx.mat_gloss(Color(0.8, 0.65, 0.3), 0.25))
+	buckle.position = Vector3(0.0, 0.08, -0.27 * w)
+	r.body.add_child(buckle)
+	var collar := Gfx.cyl_m(0.21 * w, 0.14, Gfx.mat_cloth(coat_c), 0.27 * w)
+	collar.position = Vector3(0.0, 0.84, 0.0)
+	r.body.add_child(collar)
+	for side in [-1.0, 1.0]:
+		var pad := Gfx.sphere_m(0.13 * w, Gfx.mat_gloss(coat_c.darkened(0.3), 0.45))
+		pad.position = Vector3(0.33 * side * w, 0.7, 0.0)
+		pad.scale = Vector3(1.2, 0.7, 1.1)
+		r.body.add_child(pad)
 	r.head = Node3D.new()
 	r.head.position = Vector3(0.0, 0.92, 0.0)
 	r.body.add_child(r.head)
