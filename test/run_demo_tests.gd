@@ -24,6 +24,7 @@ func _run() -> void:
 	await _t10_settings()
 	await _t11_models()
 	await _t12_docs()
+	await _t13_audio()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -495,3 +496,17 @@ func _t12_docs() -> void:
 	await free_level(lv)
 	var ts: Script = load("res://scripts/title.gd")
 	check(ts != null and ProjectSettings.get_setting("application/run/main_scene") == "res://scenes/title.tscn", "la escena principal es la pantalla de título")
+
+
+func _t13_audio() -> void:
+	print("13) Sonidos")
+	var lv := await new_level()
+	for n in ["campana", "clang", "bandeja_rueda", "hielo", "carro_rueda", "gong", "rejilla", "latido", "respiracion", "amb_mercado", "amb_olas", "amb_bomba", "amb_goteo", "amb_silbato"]:
+		check(lv._ld(n) != null, "existe el sonido «%s»" % n)
+	for n in ["amb_mercado", "amb_olas", "amb_bomba", "amb_goteo", "amb_silbato", "latido"]:
+		var st := lv._ld(n) as AudioStreamOggVorbis
+		check(st != null and st.loop, "«%s» está en bucle" % n)
+	check(lv.variants.has("step") and (lv.variants["step"] as Array).size() == 3, "tres variantes de pasos")
+	check(lv.sounds["beep"] == lv._ld("campana"), "la señal de la lámpara usa la campana de subasta")
+	check(lv.sounds["clang"] == lv._ld("clang"), "la bandeja usa el golpe metálico real")
+	await free_level(lv)

@@ -27,6 +27,11 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - Lector de folios en `hud.gd` (`open_docs`/`close_docs`, `<` `>` `Cerrar`, tecla ACCIÓN o Esc cierra, pausa el árbol) y papeles sobre la mesa del consultorio (`DESK_POS` en `level.gd`; ACCIÓN cerca de la mesa abre «orden» y «dispensario»).
 - Sección 12 de las pruebas (123 comprobaciones, 0 fallos). Verificado con render que el texto cabe.
 
+## Sonido (conectado)
+- Originales de Richi en `assets/audio/` (muy largos y desparejos); versiones recortadas y normalizadas con ffmpeg en `assets/audio/juego/`. Los `amb_*` y `latido` llevan `loop=true` en su `.import`.
+- `level.gd`: `_start_audio()` carga y sustituye los sintetizados (`beep`=campana, `clang`, `tray_roll`, `ice`, `cart_roll`, `gong`, `grate`, pasos en 3 variantes). Ambiente: 5 capas en bucle (mercado, olas, bomba, goteo, silbato). Reserva ≤ 35: latido que sube de volumen y una respiración (cada 30 s como máximo).
+- Siguen sintetizados (`sfx.gd`): hit, swish, dodge, block, slam, pickup, alarm, perfect, door, push. En headless no se reproduce nada.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

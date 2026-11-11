@@ -39,7 +39,16 @@ var grate_plate: StaticBody3D
 var grate_shape: CollisionShape3D
 var grate_light: OmniLight3D
 var grate_steam: GPUParticles3D
-var music_player: AudioStreamPlayer
+const AUDIO_DIR := "res://assets/audio/juego/"
+const AMBIENCE: Array = [
+	["amb_mercado", -12.0], ["amb_olas", -10.0], ["amb_bomba", -20.0], ["amb_goteo", -14.0], ["amb_silbato", -18.0],
+]
+var variants: Dictionary = {}
+var ambience: Array[AudioStreamPlayer] = []
+var heart: AudioStreamPlayer
+var breath: AudioStreamPlayer
+var breath_cd := 0.0
+var was_low := false
 var hitstop_t := 0.0
 var update_opened := false
 var updater: Updater
@@ -95,20 +104,19 @@ func _ready() -> void:
 	_build_entities()
 	_build_hud()
 	_set_objective()
-	if not Gfx.headless:
-		music_player = AudioStreamPlayer.new()
-		music_player.stream = Sfx.music()
-		music_player.volume_db = -13.0
-		add_child(music_player)
-		music_player.play()
+	_start_audio()
 
 
 func _exit_tree() -> void:
 	for ap in pool:
 		ap.stop()
 		ap.stream = null
-	if music_player:
-		music_player.stop()
+	for ap in ambience:
+		ap.stop()
+	if heart:
+		heart.stop()
+	if breath:
+		breath.stop()
 
 
 # ---------------------------------------------------------------- construcción
@@ -632,8 +640,71 @@ func _build_hud() -> void:
 
 # ---------------------------------------------------------------- utilidades
 
+func _ld(file: String) -> AudioStream:
+	var path := AUDIO_DIR + file + ".ogg"
+	return load(path) if ResourceLoader.exists(path) else null
+
+
+func _loop_player(stream: AudioStream, db: float) -> AudioStreamPlayer:
+	var ap := AudioStreamPlayer.new()
+	ap.stream = stream
+	ap.volume_db = db
+	add_child(ap)
+	return ap
+
+
+## Sonidos reales (assets/audio/juego); lo que no tenga archivo sigue usando el sintetizado.
+func _start_audio() -> void:
+	var over := {"beep": "campana", "clang": "clang", "tray_roll": "bandeja_rueda", "ice": "hielo", "cart_roll": "carro_rueda", "gong": "gong", "grate": "rejilla"}
+	for key: String in over:
+		var st := _ld(str(over[key]))
+		if st:
+			sounds[key] = st
+	var steps: Array[AudioStream] = []
+	for i in 3:
+		var path := "res://assets/audio/paso_metal_mojado_0%d.wav" % (i + 1)
+		if ResourceLoader.exists(path):
+			steps.append(load(path))
+	if not steps.is_empty():
+		variants["step"] = steps
+	if Gfx.headless:
+		return
+	for a: Array in AMBIENCE:
+		var st := _ld(str(a[0]))
+		if st:
+			var ap := _loop_player(st, float(a[1]))
+			ambience.append(ap)
+			ap.play()
+	var hs := _ld("latido")
+	if hs:
+		heart = _loop_player(hs, -60.0)
+	var bs := _ld("respiracion")
+	if bs:
+		breath = _loop_player(bs, -8.0)
+
+
+func _update_audio(delta: float) -> void:
+	if heart == null:
+		return
+	var low := phase == Phase.PLAY and not done and not dying and reserve <= FORCE_COST
+	var target := lerpf(-26.0, -6.0, 1.0 - clampf(reserve / FORCE_COST, 0.0, 1.0)) if low else -60.0
+	heart.volume_db = move_toward(heart.volume_db, target, 40.0 * delta)
+	if low and not heart.playing:
+		heart.play()
+	elif not low and heart.playing and heart.volume_db <= -58.0:
+		heart.stop()
+	breath_cd = maxf(0.0, breath_cd - delta)
+	if low and not was_low and breath_cd <= 0.0 and breath:
+		breath.play()
+		breath_cd = 30.0
+	was_low = low
+
+
 func play(sound: String, vol_db: float = 0.0) -> void:
 	var s: AudioStream = sounds.get(sound)
+	if variants.has(sound):
+		var vs: Array = variants[sound]
+		s = vs[randi() % vs.size()]
 	if s == null or Gfx.headless:
 		return
 	var ap := pool[pool_i]
@@ -773,6 +844,7 @@ func do_action() -> void:
 	if tray.state == Tray.S.READY and flat_dist(p, tray.start_pos()) < 2.4:
 		tray.push()
 		play("push")
+		play("tray_roll", -2.0)
 		hud.say("Empujas la bandeja por el carril…")
 		return
 	if kit_available and flat_dist(p, KIT_POS) < 2.4:
@@ -795,7 +867,7 @@ func try_force() -> void:
 			reserve -= FORCE_COST
 			cart.start()
 			guard.stand_down()
-			play("rumble")
+			play("ice", -2.0)
 			hud.say("Fuerza prestada (−35): el carro se desprende.")
 			_set_objective()
 		else:
@@ -852,6 +924,7 @@ func _respawn() -> void:
 
 
 func open_grate() -> void:
+	play("grate", -4.0)
 	grate_open = true
 	grate_shape.set_deferred("disabled", true)
 	grate_plate.visible = false
@@ -940,11 +1013,12 @@ func _on_lamp_spotted() -> void:
 
 
 func _on_cart_rolling() -> void:
-	play("rumble")
+	play("cart_roll", -3.0)
 
 
 func _on_cart_arrived() -> void:
 	play("thud")
+	play("gong", -4.0)
 	open_grate()
 	hud.say("La rejilla se abre. Baja por el hueco.", 4.0)
 
@@ -965,7 +1039,8 @@ func _set_objective() -> void:
 
 # ---------------------------------------------------------------- bucle
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_update_audio(delta)
 	player.touch_move = hud.move_vec
 	if Input.is_action_just_pressed("hook"):
 		player.do_hook()
