@@ -40,6 +40,11 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - Corregido: daño del gancho en el frame de contacto (0,13 s) y clip a ~1× (`SWING_TIME` 0,42); gancho y golpe pesado ya no atraviesan muros (`clear_line`); jugador y guardia colisionan; cámara más baja (pitch 0,58, dist 5,4) y los muros que tapan a Sira se vuelven translúcidos (material, no `transparency`: no funciona en Compatibility); campana y banner de la lámpara solo en la lonja; puerta oculta al abrir; carteles de una sola cara; charcos más claros; ruta «Sur (sin combate)»; hitstop 0,1 s y sacudida 0,3.
 - Sin hacer (de su informe): segundo enemigo y más contenido (la demo dura ~12 s si se corre), auto-cámara/lock-on, luces cálidas y niebla de color, botones de combate más grandes con iconos y zona segura, gancho y bastón más gruesos, combo con `Punch_*`, animación `Death`, flecha al objetivo, resaltar bandeja y carro, ↻ con pulsación larga, SFX reales de combate, modelos propios góticos.
 
+## Cámara tipo Blood Omen 2 y personajes (última pasada)
+- Cámara pegada a la espalda (`player.gd`: `CAM_DIST` 3,3, pitch 0,2, hombro 0,28): se recoloca sola detrás de Sira al moverse (`CAM_FOLLOW`), se encara al guardia en CHASE/WINDUP/STUNNED/BLOCK (`CAM_LOCK`) y el arrastre del dedo la mueve a mano 2 s (`cam_manual_t`).
+- `scripts/character_style.gd`: recolorea por nombre de material (los modelos usan color plano por pieza) y añade accesorios en huesos (en Torso/Chest/Neck/Head +Y arriba, +Z al frente, +X izquierda). Sira: abrigo largo con vaivén (`rig.coat`), bufanda, cuello, correa, cinturón, bolsas, coleta. Guardia: mochila oculta, casco con visera y cubrenuca, chaleco con bandas reflectantes, hombreras, farol con luz y llaves.
+- Falta: gancho/bastón con mejor forma, combo con `Punch_*`, animación `Death`, caras con más detalle, rostros distintos para Tesa/Ivo/Roque.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

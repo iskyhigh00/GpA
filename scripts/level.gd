@@ -257,7 +257,7 @@ func _sign(text: String, pos: Vector3, rot_y: float, col: Color, px: float = 0.0
 
 
 func _puddle(x: float, z: float, r: float) -> void:
-	var p := Gfx.cyl_m(r, 0.01, Gfx.mat_gloss(Color(0.11, 0.14, 0.18), 0.12))
+	var p := Gfx.cyl_m(r * 0.55, 0.01, Gfx.mat_gloss(Color(0.17, 0.21, 0.27), 0.3))
 	p.position = Vector3(x, 0.02, z)
 	Gfx.no_shadow(p)
 	add_child(p)

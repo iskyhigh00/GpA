@@ -13,14 +13,19 @@ const DODGE_TIME := 0.3
 const DODGE_SPEED := 10.5
 const DODGE_COOLDOWN := 0.9
 const DODGE_INVULN := 0.38
-const CAM_DIST := 5.4
+const CAM_DIST := 3.3
+const CAM_SHOULDER := 0.28
+const CAM_FOLLOW := 2.2
+const CAM_LOCK := 3.2
+const CAM_HEIGHT := 1.6
 const CAM_SENS := 0.0055
 
 var level: Level
 var sim_move := Vector2.ZERO
 var touch_move := Vector2.ZERO
 var cam_yaw := -PI * 0.5
-var cam_pitch := 0.58
+var cam_pitch := 0.2
+var cam_manual_t := 0.0
 var cam_total := 0.0
 var facing := -PI * 0.5
 var hook_cd := 0.0
@@ -64,12 +69,13 @@ func _ready() -> void:
 	_add_gear()
 	cam = Camera3D.new()
 	cam.top_level = true
-	cam.fov = 62.0
+	cam.fov = 64.0
 	cam.far = 80.0
+	cam.near = 0.12
 	add_child(cam)
 	cam.make_current()
 	body_pivot.rotation.y = facing
-	cam_focus = global_position + Vector3(0.0, 1.5, 0.0)
+	cam_focus = global_position + Vector3(0.0, CAM_HEIGHT, 0.0)
 
 
 ## Gancho de inspección en la mano derecha; la figura provisional suma además bufanda y bolsa.
@@ -77,12 +83,19 @@ func _add_gear() -> void:
 	var metal := Gfx.mat_gloss(Color(0.6, 0.62, 0.68), 0.3)
 	if rig.is_model:
 		# En el hueso de la muñeca, +Y apunta por la mano y -X hacia delante (medido en el modelo).
-		var shaft := Gfx.box_m(Vector3(0.8, 0.05, 0.05), metal)
-		shaft.position = Vector3(-0.3, 0.07, 0.0)
+		CharacterStyle.style_sira(rig as ModelRig)
+		var grip := Gfx.box_m(Vector3(0.28, 0.075, 0.075), Gfx.mat_gloss(Color(0.08, 0.055, 0.04), 0.6))
+		grip.position = Vector3(-0.05, 0.07, 0.0)
+		rig.arm_r.add_child(grip)
+		var shaft := Gfx.box_m(Vector3(0.55, 0.05, 0.05), metal)
+		shaft.position = Vector3(-0.42, 0.07, 0.0)
 		rig.arm_r.add_child(shaft)
-		var hook_b := Gfx.box_m(Vector3(0.05, 0.22, 0.05), metal)
-		hook_b.position = Vector3(-0.7, 0.17, 0.0)
+		var hook_b := Gfx.box_m(Vector3(0.055, 0.24, 0.055), metal)
+		hook_b.position = Vector3(-0.69, 0.18, 0.0)
 		rig.arm_r.add_child(hook_b)
+		var hook_c := Gfx.box_m(Vector3(0.14, 0.055, 0.055), metal)
+		hook_c.position = Vector3(-0.64, 0.3, 0.0)
+		rig.arm_r.add_child(hook_c)
 		return
 	var scarf := Gfx.cyl_m(0.2, 0.12, Gfx.mat_cloth(Color(0.8, 0.6, 0.2)))
 	scarf.position = Vector3(0.0, 0.86, 0.0)
@@ -126,7 +139,35 @@ func cam_right() -> Vector3:
 func rotate_cam(d: Vector2) -> void:
 	cam_yaw -= d.x * CAM_SENS
 	cam_total += absf(d.x) * CAM_SENS
-	cam_pitch = clampf(cam_pitch + d.y * CAM_SENS * 0.7, 0.2, 1.15)
+	cam_pitch = clampf(cam_pitch + d.y * CAM_SENS * 0.7, 0.0, 0.85)
+	cam_manual_t = 2.0
+
+
+## Cámara de tercera persona pegada a la espalda: se recoloca sola detrás de Sira al moverse
+## y se encara al enemigo cuando hay pelea. El arrastre del dedo la mueve a mano un momento.
+func _combat_target() -> Guard:
+	var g := level.guard
+	if g == null:
+		return null
+	var busy := g.state == Guard.S.CHASE or g.state == Guard.S.WINDUP or g.state == Guard.S.STUNNED or g.state == Guard.S.BLOCK
+	if not busy:
+		return null
+	var to := g.global_position - global_position
+	to.y = 0.0
+	return g if to.length() < 7.0 else null
+
+
+func _follow_camera(delta: float, dir: Vector3) -> void:
+	if cam_manual_t > 0.0 or locked:
+		return
+	var tgt := _combat_target()
+	if tgt != null:
+		var to := tgt.global_position - global_position
+		cam_yaw = lerp_angle(cam_yaw, atan2(-to.x, -to.z), 1.0 - exp(-CAM_LOCK * delta))
+		return
+	var mv := _read_move()
+	if dir.length() > 0.2 and mv.y < 0.5 and dodge_t <= 0.0:
+		cam_yaw = lerp_angle(cam_yaw, facing, 1.0 - exp(-CAM_FOLLOW * delta))
 
 
 func add_shake(a: float) -> void:
@@ -144,7 +185,7 @@ func respawn_at(pos: Vector3) -> void:
 	invuln = 0.0
 	swing_t = 0.0
 	hit_pending = -1.0
-	cam_focus = pos + Vector3(0.0, 1.5, 0.0)
+	cam_focus = pos + Vector3(0.0, CAM_HEIGHT, 0.0)
 
 
 func _read_move() -> Vector2:
@@ -212,6 +253,7 @@ func _physics_process(delta: float) -> void:
 			_resolve_hit()
 	dodge_cd = maxf(0.0, dodge_cd - delta)
 	invuln = maxf(0.0, invuln - delta)
+	cam_manual_t = maxf(0.0, cam_manual_t - delta)
 	var dir := Vector3.ZERO if locked else _move_dir()
 	if dodge_t > 0.0:
 		dodge_t = maxf(0.0, dodge_t - delta)
@@ -229,6 +271,7 @@ func _physics_process(delta: float) -> void:
 	if dir.length() > 0.1 and swing_t <= 0.0 and dodge_t <= 0.0:
 		facing = lerp_angle(facing, atan2(-dir.x, -dir.z), minf(1.0, 14.0 * delta))
 	body_pivot.rotation.y = facing
+	_follow_camera(delta, dir)
 	_animate(delta)
 
 
@@ -279,7 +322,7 @@ static func _fade_material() -> StandardMaterial3D:
 
 
 func _process(delta: float) -> void:
-	var target := global_position + Vector3(0.0, 1.5, 0.0)
+	var target := global_position + Vector3(0.0, CAM_HEIGHT, 0.0) + cam_right() * CAM_SHOULDER
 	cam_focus = cam_focus.lerp(target, 1.0 - exp(-14.0 * delta))
 	var focus := cam_focus
 	var off := Vector3(sin(cam_yaw) * cos(cam_pitch), sin(cam_pitch), cos(cam_yaw) * cos(cam_pitch))

@@ -74,13 +74,7 @@ func _ready() -> void:
 	baton_mat = Gfx.mat_glow(Color(0.9, 0.5, 0.15), 0.2).duplicate() as StandardMaterial3D
 	if rig.is_model:
 		# Huesos del modelo: en la cabeza Y sube y Z mira al frente; en la muñeca -X apunta hacia delante.
-		var helmet_m := Gfx.sphere_m(0.15, cap_mat)
-		helmet_m.position = Vector3(0.0, 0.2, -0.01)
-		helmet_m.scale = Vector3(1.0, 0.85, 1.1)
-		rig.head.add_child(helmet_m)
-		var brim_m := Gfx.box_m(Vector3(0.26, 0.025, 0.2), cap_mat)
-		brim_m.position = Vector3(0.0, 0.14, 0.12)
-		rig.head.add_child(brim_m)
+		CharacterStyle.style_guard(rig as ModelRig)
 		baton = Gfx.box_m(Vector3(0.85, 0.09, 0.09), baton_mat)
 		baton.position = Vector3(-0.34, 0.07, 0.0)
 	else:

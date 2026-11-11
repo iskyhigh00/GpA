@@ -88,6 +88,7 @@ func locomotion(delta: float, speed: float, _max_speed: float) -> void:
 		current = ""
 	var clip := "Idle"
 	var scale := 1.0
+	coat.rotation.x = lerpf(coat.rotation.x, 0.4 * clampf(speed / RUN_REF, 0.0, 1.2), 0.12)
 	if speed > 0.25:
 		if speed >= RUN_FROM:
 			clip = "Run"
