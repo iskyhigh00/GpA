@@ -1,0 +1,78 @@
+EL TURNO DE LA SAL — TANDA 3 — ARTE GENERADO
+
+decales/mancha_sangre_seca.png — Mancha de sangre seca
+Formato: 1024 × 1024 px, PNG RGBA.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+decales/charco_sangre.png — Charco de sangre
+Formato: 1024 × 1024 px, PNG RGBA.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+decales/oxido_en_gotas.png — Óxido en gotas
+Formato: 1024 × 1024 px, PNG RGBA.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+decales/grieta_larga.png — Grieta larga
+Formato: 1024 × 1024 px, PNG RGBA.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+decales/sal_en_juntas.png — Sal blanqueada en juntas
+Formato: 1024 × 1024 px, PNG RGBA.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+decales/moho_esquina.png — Moho en una esquina
+Formato: 1024 × 1024 px, PNG RGBA.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+carteles/cartel_subasta.png — SUBASTA POR SECTORES
+Formato: 1024 × 1536 px, PNG RGB.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+carteles/cartel_lote_14.png — LOTE 14 · HIELO Y PESCADO
+Formato: 1024 × 1536 px, PNG RGB.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+carteles/cartel_paso_restringido.png — PROHIBIDO EL PASO · GUARDIA DEL TELAR
+Formato: 1024 × 1536 px, PNG RGB.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+carteles/cartel_bandejas.png — CUIDADO CON LAS BANDEJAS
+Formato: 1024 × 1536 px, PNG RGB.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
+
+carteles/cartel_compuertas.png — CIERRE DE COMPUERTAS 23:40
+Formato: 1024 × 1536 px, PNG RGB.
+Fuente: generación de imágenes en ChatGPT para El turno de la sal.
+Enlace externo: no aplica, creado en este encargo.
+Autoría: generado con IA para el encargo.
+Licencia de la fuente: imagen generada para el encargo, sin licencia CC0 externa.
