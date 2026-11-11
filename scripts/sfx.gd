@@ -50,3 +50,33 @@ static func rumble(dur: float = 1.2, vol: float = 0.4) -> AudioStreamWAV:
 		s *= minf(1.0, t * 8.0) * minf(1.0, (dur - t) * 4.0)
 		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
 	return _wav(data)
+
+
+static func noise_burst(dur: float, vol: float, decay: float, smooth: float) -> AudioStreamWAV:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var n := int(RATE * dur)
+	var data := PackedByteArray()
+	data.resize(n * 2)
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * smooth
+		var s := lp * exp(-decay * t / dur) * vol
+		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
+	return _wav(data)
+
+
+static func build_all() -> Dictionary:
+	return {
+		"beep": tone(880.0, 0.28, 0.45, 2.0),
+		"clang": clang(),
+		"rumble": rumble(),
+		"thud": noise_burst(0.5, 1.4, 6.0, 0.06),
+		"swish": noise_burst(0.18, 0.5, 3.0, 0.35),
+		"hit": noise_burst(0.25, 1.6, 5.0, 0.12),
+		"pickup": tone(660.0, 0.2, 0.4, 3.0),
+		"push": tone(240.0, 0.18, 0.5, 4.0),
+		"alarm": tone(520.0, 0.35, 0.5, 1.5),
+		"door": noise_burst(0.6, 0.7, 3.0, 0.03),
+	}
