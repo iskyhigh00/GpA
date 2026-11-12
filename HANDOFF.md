@@ -86,6 +86,10 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - Ajustes propios al integrar: la flecha de objetivo se aparta de los botones y las etiquetas de botones se encogen para caber dentro del margen (323 comprobaciones).
 - Siguiente: PR «ampliación oeste» (segunda lámpara, vigía y rejilla ruidosa) con `Level.expansion`.
 
+## Ampliación oeste (PR #8 de ChatGPT, fusionado)
+- `Level.expansion` (true por defecto): segunda lámpara «de desembarco» (riel en x = 1, z de -8 a 8), segundo guardia «vigía» (`level.guards`, `level.guard` sigue siendo el del paso sur), rejilla ruidosa en x 4-6, claraboyas decorativas y cajones de cobertura. 374 comprobaciones (323 con `expansion = false`).
+- Recorrido simulado: directo ~27 s; explorando con diálogo y folios ~3 min (jugable ~50 s). Falta ver y oír en el Samsung.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.
