@@ -1,0 +1,37 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://dndpdfgksmapq"
+path="res://.godot/imported/cajon_pescado_cajon_pescado_arm.png-ab5cf86f9439e01ebf3134150e726fe8.ctex"
+metadata={
+"vram_texture": false
+}
+generator_parameters={
+"md5": "aa908bfe738dbd2c428980dcf6d2d1d7"
+}
+
+[deps]
+
+source_file="res://assets/utileria_nueva/cajon_pescado/cajon_pescado_cajon_pescado_arm.png"
+dest_files=["res://.godot/imported/cajon_pescado_cajon_pescado_arm.png-ab5cf86f9439e01ebf3134150e726fe8.ctex"]
+
+[params]
+
+compress/mode=0
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1

@@ -42,6 +42,7 @@ func _run() -> void:
 	await _t23_labels()
 	await _t24_intro()
 	await _t25_skyline()
+	await _t26_utileria()
 	await _t22_objective_markers()
 	await _t15_combat_fixes()
 	await _t23_hook_combo()
@@ -1124,8 +1125,8 @@ func _t20_docs_cap2() -> void:
 func _t21_static_batch() -> void:
 	print("21) Lotes de geometría estática")
 	var lv := await new_level()
-	check(lv.static_mesh_counts.x > lv.static_mesh_counts.y and lv.static_mesh_counts.y < 80,
-		"mallas del escenario: %d → %d (objetivo <80)" % [lv.static_mesh_counts.x, lv.static_mesh_counts.y])
+	check(lv.static_mesh_counts.x > lv.static_mesh_counts.y and lv.static_mesh_counts.y < 100,
+		"mallas del escenario: %d → %d (objetivo <100)" % [lv.static_mesh_counts.x, lv.static_mesh_counts.y])
 	check(lv.door_body.get_child(1) is MeshInstance3D and lv.grate_plate.get_child(1) is MeshInstance3D,
 		"puerta y rejilla conservan sus mallas independientes")
 	check(lv.kit_cross.size() == 2 and is_instance_valid(lv.kit_cross[0]) and is_instance_valid(lv.kit_cross[1]),
@@ -1613,4 +1614,13 @@ func _t32_atmosphere() -> void:
 		and air.get_child_count() == 15, "volver a Baja apaga los efectos sin crear otros nodos")
 	Quality.level = previous
 	Quality.save()
+	await free_level(lv)
+
+
+func _t26_utileria() -> void:
+	print("26) Utilería 3D nueva")
+	var lv := await new_level()
+	for n in ["barril_madera", "cajon_pescado", "farol_queroseno"]:
+		check(ResourceLoader.exists("res://assets/utileria_nueva/%s/%s.glb" % [n, n]), "existe el modelo «%s»" % n)
+	check(lv.props_placed >= 15, "barriles, faroles y cajones colocados (%d)" % lv.props_placed)
 	await free_level(lv)

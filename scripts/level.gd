@@ -97,6 +97,7 @@ var pending_thoughts: Array = []
 var bark_i: Dictionary = {}
 var last_bark := ""
 var posters := 0
+var props_placed := 0
 var skyline_built := false
 var models_placed := 0
 var static_mesh_counts := Vector2i.ZERO
@@ -261,6 +262,23 @@ func _pipe_x(x0: float, x1: float, y: float, z: float, r: float) -> void:
 		add_child(br)
 
 
+## Pieza GLB de assets/utileria_nueva (hecha por ChatGPT con Blender/Python); null si falta.
+func _prop(id: String, pos: Vector3, rot_y: float = 0.0, scale_f: float = 1.0, parent: Node = null) -> Node3D:
+	var path := "res://assets/utileria_nueva/%s/%s.glb" % [id, id]
+	if not ResourceLoader.exists(path):
+		return null
+	var ps := load(path) as PackedScene
+	if ps == null:
+		return null
+	var n := ps.instantiate() as Node3D
+	n.position = pos
+	n.rotation_degrees.y = rot_y
+	n.scale = Vector3.ONE * scale_f
+	(parent if parent else self).add_child(n)
+	props_placed += 1
+	return n
+
+
 func _barrel(x: float, z: float) -> void:
 	var b := StaticBody3D.new()
 	b.position = Vector3(x, 0.0, z)
@@ -272,14 +290,15 @@ func _barrel(x: float, z: float) -> void:
 	cs.shape = sh
 	cs.position = Vector3(0.0, 0.475, 0.0)
 	b.add_child(cs)
-	var body := Gfx.cyl_m(0.38, 0.95, Gfx.mat_rust(), 0.34)
-	body.position = Vector3(0.0, 0.475, 0.0)
-	b.add_child(body)
-	for yy in [0.2, 0.75]:
-		var band := Gfx.cyl_m(0.405, 0.06, Gfx.mat_gloss(Color(0.07, 0.07, 0.08), 0.4))
-		band.position = Vector3(0.0, yy, 0.0)
-		b.add_child(band)
 	add_child(b)
+	if _prop("barril_madera", Vector3.ZERO, x * 37.0, 1.25, b) == null:
+		var body := Gfx.cyl_m(0.38, 0.95, Gfx.mat_rust(), 0.34)
+		body.position = Vector3(0.0, 0.475, 0.0)
+		b.add_child(body)
+		for yy in [0.2, 0.75]:
+			var band := Gfx.cyl_m(0.405, 0.06, Gfx.mat_gloss(Color(0.07, 0.07, 0.08), 0.4))
+			band.position = Vector3(0.0, yy, 0.0)
+			b.add_child(band)
 
 
 func _crate(pos: Vector3, size: Vector3, layer: int = 2) -> void:
@@ -304,6 +323,8 @@ func _stall(pos: Vector3, size: Vector3) -> void:
 
 
 func _hang_lamp(x: float, z: float) -> void:
+	if _prop("farol_queroseno", Vector3(x, 2.35, z), x * 23.0, 1.5) != null:
+		return
 	var chain := Gfx.cyl_m(0.015, 0.7, Gfx.mat_gloss(Color(0.05, 0.05, 0.05), 0.5))
 	chain.position = Vector3(x, 3.0, z)
 	add_child(chain)
@@ -527,7 +548,16 @@ func _model(name_id: String, pos: Vector3, rot_y: float, scale_f: float) -> Node
 	return n
 
 
+func _build_fish_crates() -> void:
+	var stacks := [Vector3(21.3, 0.0, 4.8), Vector3(-3.4, 0.0, -9.1), Vector3(12.8, 0.0, 9.2), Vector3(20.6, 0.0, -3.9)]
+	for i in stacks.size():
+		var base: Vector3 = stacks[i]
+		for k in 2 + i % 2:
+			_prop("cajon_pescado", base + Vector3(0.05 * k, 0.355 * k, 0.04 * k), 12.0 * i + 9.0 * k, 1.0)
+
+
 func _build_model_props() -> void:
+	_build_fish_crates()
 	_model("ancla", Vector3(20.2, 0.05, 8.2), 30.0, 1.7)
 	_model("red_pesca", Vector3(16.0, 0.0, -9.55), 0.0, 1.5)
 	for x in [4.6, 5.3, 6.0, 14.2, 14.9]:

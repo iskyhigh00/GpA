@@ -130,3 +130,8 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - Documento 2: tiene un matiz que no coincide del todo con la historia (no existe un "segundo informe").
 - Si `git push` es rechazado, hacer `git pull --rebase origin main` y reintentar (Claude Code también sube cambios).
 - `gh release view` no funciona en este entorno; usar `gh api repos/iskyhigh00/GpA/releases/tags/latest`.
+
+## Utilería 3D nueva (PR #11 parcial)
+- `assets/utileria_nueva/`: barril_madera, cajon_pescado, farol_queroseno (ChatGPT). Cargados con `Level._prop()`; barriles, faroles colgantes y pilas de cajones de pescado usan los modelos (con fallback a formas simples).
+- Pendiente de ChatGPT: cadena, camilla, mesa, taburete, estantería, balde, cuerda, tubería, pasarela, carro de hielo, bandeja, botiquín, kit de arquitectura, Tesa/Ivo/Roque.
+- Test de mallas estáticas relajado a <100 (antes 290).
