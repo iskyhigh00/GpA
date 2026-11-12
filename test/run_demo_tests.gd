@@ -17,6 +17,7 @@ func _run() -> void:
 	await _t3_south()
 	await _t4_low_reserve()
 	await _t5_checkpoint()
+	await _t5_touch_and_respawn()
 	await _t6_lamp_signal()
 	await _t7_lamp_detects()
 	await _t8_buttons()
@@ -303,6 +304,120 @@ func _t5_checkpoint() -> void:
 	check(lv.kit_available, "botiquín restaurado")
 	check(not lv.grate_open and not lv.grate_shape.disabled, "rejilla cerrada")
 	check(lv.door_open, "la puerta sigue abierta")
+	await free_level(lv)
+
+
+func _t5_touch_and_respawn() -> void:
+	print("5b) Robustez de toques y reinicios")
+	var lv := await new_level()
+	var hud := lv.hud
+	var hook_signals := [0]
+	hud.hook_pressed.connect(func() -> void: hook_signals[0] += 1)
+	var hook := hud.button_center("hook")
+	for i in 16:
+		touch(lv, 10, hook, true)
+	check(hook_signals[0] == 1 and int(hud.held.get("hook", 0)) == 1,
+		"eventos duplicados del mismo dedo activan el gancho una sola vez")
+	touch(lv, 10, hook, false)
+	check(int(hud.held.get("hook", 0)) == 0 and not hud.touches.has(10), "al soltar no queda un botón retenido")
+	for i in 20:
+		touch(lv, 10, hook, true)
+		touch(lv, 10, hook, false)
+	check(is_equal_approx(lv.reserve, Level.MAX_RESERVE - Level.HOOK_COST),
+		"pulsaciones rápidas respetan el coste y el enfriamiento del gancho")
+
+	var stick := Vector2(130, hud.view_size().y - 150.0)
+	var camera := Vector2(hud.view_size().x - 310.0, 220)
+	var action := hud.button_center("ampoule")
+	var yaw := lv.player.cam_yaw
+	touch(lv, 20, stick, true)
+	touch(lv, 21, camera, true)
+	touch(lv, 22, action, true)
+	touch(lv, 23, action, true)
+	drag(lv, 20, stick + Vector2(55, 0), Vector2(55, 0))
+	drag(lv, 21, camera + Vector2(38, 0), Vector2(38, 0))
+	check(hud.stick_index == 20 and hud.move_vec.x > 0.5 and not is_equal_approx(yaw, lv.player.cam_yaw)
+		and int(hud.held.get("ampoule", 0)) == 2, "stick, cámara y dos dedos en un botón se registran a la vez")
+	touch(lv, 22, action, false)
+	check(int(hud.held.get("ampoule", 0)) == 1 and hud.stick_index == 20,
+		"soltar un dedo del botón conserva el otro dedo y el stick")
+	var cancel := InputEventScreenTouch.new()
+	cancel.index = 20
+	cancel.position = stick
+	cancel.pressed = true
+	cancel.canceled = true
+	hud._input(cancel)
+	check(hud.stick_index == -1 and hud.move_vec.is_zero_approx() and hud.touches.has(21),
+		"un toque cancelado libera el stick sin afectar a la cámara")
+	touch(lv, 21, camera, false)
+	touch(lv, 23, action, false)
+
+	touch(lv, 24, hud.button_center("dodge"), true)
+	check(lv.player.dodge_t > 0.0 and lv.player.invuln > 0.0, "la esquiva estaba activa al agotar la reserva")
+	var before := lv.player.global_position
+	lv.spend(lv.reserve)
+	check(lv.dying and lv.player.dodge_t == 0.0 and lv.player.invuln == 0.0 and hud.touches.is_empty() and hud.held.is_empty(),
+		"morir cancela la esquiva y libera las entradas del HUD")
+	touch(lv, 25, hud.button_center("settings"), true)
+	check(not paused and not hud.settings_visible, "Ajustes no interrumpe el fundido de muerte")
+	if paused:
+		hud.set_settings(false)
+	await _frames(8)
+	check(lv.flat_dist(lv.player.global_position, before) < 0.05, "el personaje no se desliza durante la muerte")
+	check(await until(func() -> bool: return not lv.dying, 180), "reaparece tras morir en plena esquiva")
+	check(not lv.player.locked and lv.player.dodge_cd == 0.0, "recupera los controles y la esquiva")
+	await free_level(lv)
+
+	lv = await new_level()
+	hud = lv.hud
+	hud.set_settings(true)
+	check(paused and hud.settings_visible, "Ajustes está abierto antes de la muerte")
+	lv.spend(lv.reserve)
+	check(not paused and not hud.settings_visible, "morir con Ajustes abierto permite avanzar el reinicio")
+	if paused:
+		hud.set_settings(false)
+	check(await until(func() -> bool: return not lv.dying, 180), "reaparece desde Ajustes")
+	hud.open_docs(Docs.get_docs(["orden"]))
+	check(paused and hud.doc_visible, "un folio está abierto antes de la muerte")
+	lv.spend(lv.reserve)
+	check(not paused and not hud.doc_visible, "morir con un folio abierto permite avanzar el reinicio")
+	if paused:
+		hud.close_docs()
+	check(await until(func() -> bool: return not lv.dying, 180), "reaparece desde el lector de folios")
+	hud.open_dialogue(["Sira|Prueba de diálogo"])
+	lv.request_restart()
+	check(not paused and not hud.dialog_visible, "la misma transición cierra un diálogo abierto")
+	if paused:
+		hud.close_dialogue()
+	await until(func() -> bool: return not lv.dying, 180)
+	await free_level(lv)
+
+	lv = await new_level()
+	hud = lv.hud
+	lv.player.global_position = IceCart.HOME + Vector3(0.0, 0.1, -2.0)
+	for i in 12:
+		touch(lv, 26, hud.button_center("force"), true)
+		touch(lv, 26, hud.button_center("force"), false)
+	check(lv.cart.state == IceCart.S.TREMBLING and is_equal_approx(lv.reserve, Level.MAX_RESERVE - Level.FORCE_COST),
+		"pulsar Fuerza en ráfaga desprende el carro y cobra una sola vez")
+	var rolling := [0]
+	lv.cart.rolling_started.connect(func() -> void: rolling[0] += 1)
+	lv.cart.t = IceCart.TREMBLE_TIME - 0.03
+	lv.player.do_hook()
+	touch(lv, 27, hud.button_center("restart"), true)
+	check(hud.held.get("restart", 0) == 1, "Reiniciar conserva su indicador durante la pulsación")
+	check(lv.player.hit_pending < 0.0, "reiniciar cancela un golpe pendiente")
+	await _frames(10)
+	check(lv.dying and rolling[0] == 0 and not lv.grate_open,
+		"reiniciar al final del temblor no dispara el rodado ni abre la rejilla")
+	check(await until(func() -> bool: return not lv.dying, 180), "se completa el reinicio durante el temblor")
+	check(hud.touches.is_empty() and hud.held.is_empty(), "la reaparición limpia incluso un Reiniciar sin soltar")
+	check(lv.cart.state == IceCart.S.FROZEN and lv.cart.position.is_equal_approx(IceCart.HOME)
+		and lv.cart.crust.visible and lv.cart.body.collision_layer == 2 and not lv.grate_shape.disabled,
+		"carro, colisión y rejilla regresan al estado del punto de control")
+	lv.player.global_position = IceCart.HOME + Vector3(0.0, 0.1, -2.0)
+	lv.try_force()
+	check(await until(func() -> bool: return rolling[0] == 1, 100), "el carro vuelve a rodar tras usar Fuerza otra vez")
 	await free_level(lv)
 
 

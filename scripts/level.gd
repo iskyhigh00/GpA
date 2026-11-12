@@ -1117,22 +1117,25 @@ func try_force() -> void:
 func request_restart() -> void:
 	if done or dying:
 		return
-	death_t = 0.5
-	dying = true
-	player.locked = true
-	hud.fade_target = 1.0
+	_begin_respawn(0.5, true)
 
 
 func die() -> void:
 	if dying or done:
 		return
-	dying = true
-	death_t = 1.0
-	player.locked = true
-	hud.fade_target = 1.0
+	_begin_respawn(1.0)
 	hud.flash = 1.0
 	play("body_fall")
 	hud.say("Sin reserva. Vuelves al punto de control.", 2.5)
+
+
+func _begin_respawn(delay: float, keep_restart_touch: bool = false) -> void:
+	dying = true
+	death_t = delay
+	player.lock_for_respawn()
+	cart.set_physics_process(false)
+	hud.prepare_respawn(keep_restart_touch)
+	hud.fade_target = 1.0
 
 
 func _respawn() -> void:
@@ -1155,7 +1158,9 @@ func _respawn() -> void:
 	guard.reset()
 	lamp.reset()
 	cart.reset()
+	cart.set_physics_process(true)
 	player.respawn_at(checkpoint)
+	hud.reset_touches()
 	hud.fade_target = 0.0
 	_set_objective()
 
