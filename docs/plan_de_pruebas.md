@@ -30,3 +30,16 @@ bug_03: Qué pasó:
 bug_04: Cuántos FPS:
 bug_05: Cuánto tardó en calentarse:
 ```
+
+## Barrido de la lámpara en el paso norte
+
+| Ajuste de RailLamp | Antes | Después |
+| --- | ---: | ---: |
+| Radio del círculo | 2,3 m | 4,4 m |
+| Velocidad sobre el riel | 2,8 m/s | 4,0 m/s |
+| Exposición para detectar | 0,5 s | 0,5 s |
+| Distracción tras el golpe de la bandeja | 8 s | 8 s |
+
+El paso mide 3 m de ancho (z de −8 a −5). Su borde más lejano queda a 4,27 m del centro del círculo cuando la lámpara está en un extremo del riel.
+
+La prueba headless cruza a velocidad máxima por el centro y ambos lados del paso, con diez tiempos de salida repartidos por todo el barrido. Antes del ajuste, la lámpara detectó 6 de 10 intentos. Con el ajuste detectó 10 de 10. La prueba de ruta norte comprueba que se puede cruzar con la bandeja antes de que terminen los 8 s y sin alertar al guardia.
