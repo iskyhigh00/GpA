@@ -10,6 +10,7 @@ const RUN_REF := 4.0
 const RUN_FROM := 2.2
 
 var model: Node3D
+var new_pack := false
 var skeleton: Skeleton3D
 var anim: AnimationPlayer
 var hand_r: Node3D
@@ -34,7 +35,9 @@ static func build_model(path: String, height_scale: float = 1.0, width_scale: fl
 	if r.anim == null or r.skeleton == null:
 		r.model.free()
 		return null
+	Gfx.strip_meshes(r.model)
 	r.is_model = true
+	r.new_pack = path.contains("personajes_nuevos")
 	r.model.rotation.y = PI
 	r.root = Node3D.new()
 	r.root.scale = Vector3(width_scale, height_scale, width_scale)

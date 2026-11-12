@@ -69,6 +69,7 @@ var rig: Rig
 var last_state: S = S.PATROL
 var baton: Node3D
 var baton_mat: StandardMaterial3D
+var new_baton_mat: StandardMaterial3D
 var dropped: Node3D
 var ring: MeshInstance3D
 var cone: MeshInstance3D
@@ -96,7 +97,9 @@ func _ready() -> void:
 	add_child(cs)
 	visual = Node3D.new()
 	add_child(visual)
-	rig = ModelRig.build_model("res://assets/personajes/Guardia_de_la_Lonja.gltf", 1.06 if lookout else 1.0, 1.24 if lookout else 1.08)
+	rig = ModelRig.build_model("res://assets/personajes_nuevos/guardia_del_telar.glb", 1.03 if lookout else 0.95, 1.2 if lookout else 1.02)
+	if rig == null:
+		rig = ModelRig.build_model("res://assets/personajes/Guardia_de_la_Lonja.gltf", 1.06 if lookout else 1.0, 1.24 if lookout else 1.08)
 	if rig == null:
 		rig = Rig.build(Color(0.8, 0.64, 0.55), Color(0.2, 0.24, 0.2), Color(0.12, 0.13, 0.13), Color(0.08, 0.08, 0.08), true)
 	visual.add_child(rig.root)
@@ -108,8 +111,10 @@ func _ready() -> void:
 	baton_mat.metallic = 0.3
 	if rig.is_model:
 		# Huesos del modelo: en la cabeza Y sube y Z mira al frente; en la muñeca -X apunta hacia delante.
-		CharacterStyle.style_guard(rig as ModelRig)
-		baton = Weapons.baton(baton_mat)
+		baton = _new_baton() if (rig as ModelRig).new_pack else null
+		if baton == null:
+			CharacterStyle.style_guard(rig as ModelRig)
+			baton = Weapons.baton(baton_mat)
 		baton.position = Vector3(0.0, 0.07, 0.0)
 	else:
 		var helmet := Gfx.sphere_m(0.23, cap_mat)
@@ -132,7 +137,9 @@ func _ready() -> void:
 	lantern.omni_range = 4.0
 	lantern.light_energy = 0.8
 	visual.add_child(lantern)
-	dropped = Weapons.baton(baton_mat)
+	dropped = _new_baton() if rig.is_model and (rig as ModelRig).new_pack else null
+	if dropped == null:
+		dropped = Weapons.baton(baton_mat)
 	dropped.top_level = true
 	add_child(dropped)
 	ring = Gfx.disc(SLAM_RADIUS, Color(1.0, 0.15, 0.1, 0.0))
@@ -151,6 +158,34 @@ func _ready() -> void:
 	cone.position = Vector3(0.0, 0.04, 0.0)
 	visual.add_child(cone)
 	reset()
+
+
+## Bastón del paquete nuevo (GLB). El material se duplica para poder hacerlo brillar al anunciar un golpe.
+func _new_baton() -> Node3D:
+	var ps := load("res://assets/personajes_nuevos/baston_guardia.glb") as PackedScene
+	if ps == null:
+		return null
+	var n := ps.instantiate() as Node3D
+	if Gfx.headless:
+		Gfx.strip_meshes(n)
+		return n
+	var meshes := n.find_children("*", "MeshInstance3D", true, false)
+	if meshes.is_empty():
+		n.free()
+		return null
+	var mi := meshes[0] as MeshInstance3D
+	if mi.mesh == null:
+		return n
+	var src := mi.mesh.surface_get_material(0) as StandardMaterial3D
+	if src != null:
+		if not new_baton_mat:
+			new_baton_mat = src.duplicate() as StandardMaterial3D
+			new_baton_mat.emission_enabled = true
+			new_baton_mat.emission = Color(0.55, 0.25, 0.05)
+			new_baton_mat.emission_energy_multiplier = 0.0
+			baton_mat = new_baton_mat
+		mi.material_override = new_baton_mat
+	return n
 
 
 func reset() -> void:

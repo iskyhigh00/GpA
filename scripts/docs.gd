@@ -146,7 +146,7 @@ ambientCG (CC0): Metal 063.
 3dtextures.me, Katsukagi: Glass Frosted 003.
 
 MODELOS 3D
-Quaternius (CC0): personajes y ancla.
+Quaternius (CC0): personajes, ancla y bases de Sira, el guardia y sus armas (ropa y utilería propias).
 Pixor Library, Frakassets: red de pesca.
 OpenGameArt, plaggy: gancho de carnicero.
 

@@ -105,6 +105,11 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - Carro de hielo rehecho (`ice_cart.gd`): plataforma de tablones, chasis de acero (conserva `objective_material` para el pulso del marcador), 8 bloques de hielo translúcido (`Gfx.mat_ice`), ruedas con cubo, barra de empuje y carámbanos. Botiquín como armario con puerta de vidrio, estantes y frascos (la cruz sigue en `kit_cross`). Zócalo de madera en el consultorio. Sombras de contacto blandas (`Gfx.blob_shadow`) bajo Sira y los guardias.
 - Pendiente visual: personajes 3D (ChatGPT), utilería 3D (barril, farol, cadena, camilla, mesa…), kit de interfaz e ilustraciones de la introducción (Gemini), efectos de atmósfera (PR «chatgpt/atmosfera»).
 
+## Personajes 3D nuevos (PR #9 de ChatGPT, integrados)
+- `assets/personajes_nuevos/`: `sira_cendal.glb`, `guardia_del_telar.glb`, `gancho_sira.glb`, `baston_guardia.glb` (ropa y utilería sobre las bases Quaternius CC0, atlas procedurales, mismo esqueleto de 62 huesos y clips). `ModelRig.new_pack` indica que se usó el paquete nuevo; Sira y el guardia lo cargan primero y, si falta, usan los gltf viejos con `CharacterStyle` y `Weapons`. El bastón nuevo se duplica el material (`new_baton_mat`) para brillar al anunciar golpes.
+- En headless se quitan las mallas importadas (`Gfx.strip_meshes`), porque el renderizador dummy da error.
+- Pendiente: ajustar los puntos de montaje en un teléfono, caras y manos (siguen simples), Tesa, Ivo y Roque.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

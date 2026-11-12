@@ -69,7 +69,9 @@ func _ready() -> void:
 	roll_node = Node3D.new()
 	roll_node.position = Vector3(0.0, 0.9, 0.0)
 	body_pivot.add_child(roll_node)
-	rig = ModelRig.build_model("res://assets/personajes/Sira_Cendal.gltf", 0.93, 0.93)
+	rig = ModelRig.build_model("res://assets/personajes_nuevos/sira_cendal.glb", 0.97, 0.97)
+	if rig == null:
+		rig = ModelRig.build_model("res://assets/personajes/Sira_Cendal.gltf", 0.93, 0.93)
 	if rig == null:
 		rig = Rig.build(Color(0.86, 0.72, 0.62), Color(0.1, 0.24, 0.3), Color(0.1, 0.11, 0.14), Color(0.1, 0.07, 0.06))
 	rig.root.position = Vector3(0.0, -0.9, 0.0)
@@ -92,8 +94,15 @@ func _add_gear() -> void:
 	var metal := Gfx.mat_gloss(Color(0.6, 0.62, 0.68), 0.3)
 	if rig.is_model:
 		# En el hueso de la muñeca, +Y apunta por la mano y -X hacia delante (medido en el modelo).
-		CharacterStyle.style_sira(rig as ModelRig)
-		var weapon := Weapons.hook()
+		var weapon: Node3D = null
+		if (rig as ModelRig).new_pack:
+			var wps := load("res://assets/personajes_nuevos/gancho_sira.glb") as PackedScene
+			weapon = wps.instantiate() as Node3D if wps else null
+			if weapon:
+				Gfx.strip_meshes(weapon)
+		if weapon == null:
+			CharacterStyle.style_sira(rig as ModelRig)
+			weapon = Weapons.hook()
 		weapon.position = Vector3(0.0, 0.07, 0.0)
 		rig.arm_r.add_child(weapon)
 		return

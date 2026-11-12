@@ -471,3 +471,11 @@ static func blob_shadow(radius: float) -> MeshInstance3D:
 	q.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
 	q.position = Vector3(0.0, 0.025, 0.0)
 	return q
+
+
+## En headless el renderizador «dummy» no admite mallas importadas: se retiran (esqueleto y animaciones se conservan).
+static func strip_meshes(node: Node) -> void:
+	if not headless:
+		return
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		mi.free()
