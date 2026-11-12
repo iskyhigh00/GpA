@@ -1,0 +1,50 @@
+EL TURNO DE LA SAL · PERSONAJES Y UTILERÍA
+========================================
+
+ARCHIVOS
+guardia_del_telar.glb — 14.636 triángulos, 1 malla, 1 material, 62 huesos, 10 clips.
+sira_cendal.glb — 11.318 triángulos, 1 malla, 1 material, 62 huesos, 10 clips.
+gancho_sira.glb — 1.810 triángulos, 0,900 m a lo largo de X, 1 malla, sin rig.
+baston_guardia.glb — 2.202 triángulos, 0,800 m a lo largo de X, 1 malla, sin rig.
+
+Cada GLB lleva tres mapas de 1024 × 1024 integrados: color, normal tangente
+y ARM (R = oclusión, G = rugosidad, B = metalicidad). Las armas son piezas
+separadas; la punta va hacia −X y el origen (0,0,0) cae en la empuñadura.
+Los personajes están en pose A, con manos abiertas y vacías. El farol y las
+llaves del Guardia cuelgan de su cinturón. El eje vertical en GLB es +Y.
+
+RIG Y ANIMACIONES
+Esqueleto alternativo del proyecto con Root, Body, Hips, Abdomen, Torso,
+Chest, Neck, Head, Shoulder.L/R, UpperArm.L/R, LowerArm.L/R, Wrist.L/R,
+UpperLeg.L/R, LowerLeg.L/R, Foot.L/R y articulaciones de dedos.
+Clips: Idle, Walk, Run, Sword_Slash, Roll, HitRecieve, HitRecieve_2, Death,
+Punch_Left y Punch_Right. Se mantienen sus nombres, incluido HitRecieve.
+El golpe con arma anima el cuerpo. Acopla el GLB del arma a Wrist.R.
+La pose A se aplica al enlace de la piel; los clips conservan sus curvas.
+
+FUENTE, HERRAMIENTAS Y LICENCIAS
+Modelado y ajustes de rig con Blender 4.3.2 en modo sin interfaz. Atlas
+procedural original en Python (Pillow y NumPy), con paleta y patrones
+diseñados para el proyecto. Armado y validación de glTF 2.0 con Python,
+NumPy, SciPy y Godot 4.3. Las texturas son procedurales; no son pintura manual.
+
+Las bases de anatomía, esqueletos y clips se reutilizan del repositorio
+iskyhigh00/GpA, assets/personajes/Sira_Cendal.gltf y Guardia_de_la_Lonja.gltf,
+derivados de Adventurer (Quaternius), CC0 1.0:
+- Sira (Adventurer femenino): https://poly.pizza/m/ZwF0K7WBmu
+- Guardia (Adventurer masculino): https://poly.pizza/m/5EGWBMpuXq
+- Paquetes originales de Quaternius:
+  https://quaternius.com/packs/ultimatemodularwomen.html
+  https://quaternius.com/packs/ultimatemodularcharacters.html
+- CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+
+Armas, indumentaria nueva, utilería y atlas: geometría y mapas generados
+para este encargo, a partir de las referencias del proyecto. Las hojas de
+concepto sirvieron de guía local y no se incluyen. No se aplicó un servicio
+de imagen a 3D. CC0 describe las bases de Quaternius, no las ilustraciones
+de referencia ni una licencia añadida para el diseño del proyecto.
+
+VERIFICACIÓN
+Importación limpia en Godot 4.3 GL Compatibility, presencia de los huesos
+del esqueleto, ejecución de los clips y ausencia de rig en las armas.
+La integración en la escena de juego y la prueba en Android quedan aparte.
