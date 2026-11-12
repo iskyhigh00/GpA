@@ -30,6 +30,7 @@ func _run() -> void:
 	await _t17_barks()
 	await _t18_models()
 	await _t19_dialogue()
+	await _t20_docs_cap2()
 	await _t15_combat_fixes()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
@@ -693,3 +694,16 @@ func _t19_dialogue() -> void:
 	lv.think("entra")
 	check(lv.hud.last_message == "Mensaje importante", "un pensamiento no se repite")
 	await free_level(lv)
+
+
+func _t20_docs_cap2() -> void:
+	print("20) Folios del capítulo 2 y 3")
+	check(Docs.ALL.size() == 9, "hay 9 folios en total (%d)" % Docs.ALL.size())
+	for id in ["carta_ivo", "nota_elvira", "parte_roque", "circular"]:
+		check(Docs.get_docs([id]).size() == 1, "existe el folio «%s»" % id)
+	var carta := str(Docs.get_docs(["carta_ivo"])[0]["texto"])
+	check(carta.contains("doce familias") and carta.contains("Cuarenta y una personas"), "la carta de Ivo coincide con el censo (12 familias, 41 personas)")
+	var elvira := str(Docs.get_docs(["nota_elvira"])[0]["texto"])
+	check(elvira.contains("13/11/2026, 22:50") and not elvira.contains("ampolla"), "la nota de Elvira es del 13/11 22:50 y no habla de ampollas")
+	var circ := str(Docs.get_docs(["circular"])[0]["texto"])
+	check(circ.contains("14/11/2026, 01:00"), "la circular de Intendencia es posterior a la orden de inundación (13/11 23:40)")

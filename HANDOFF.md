@@ -66,6 +66,10 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `Hud.open_dialogue()`: panel de diálogo (toque avanza, 5 s auto, «Saltar»; pausa el árbol). `Level.INTRO` (8 líneas Tesa/Sira, se muestra al empezar, no en headless). `Level.think()` muestra 4 pensamientos de Sira una sola vez (`THOUGHTS`) y la línea final al abrirse la rejilla.
 - De la reescritura de DeepSeek NO integrado todavía: diseño del cap. 2 (aún mezcla ritmo; pone el freno al sur en un paso y al norte en el resto; quita la elección del cajón), folios nuevos (la carta de Ivo y la circular repiten la llave de la vitrina sin venir a cuento), dlg2 y plan de pruebas (ACCIÓN no abre la rejilla; no hay «golpe doble» sonoro ni folio CR-2026-019 en el juego).
 
+## Textos de DeepSeek (segunda ronda, revisados)
+- `scripts/docs.gd`: 4 folios nuevos (`carta_ivo` y `circular` para el cap. 2; `nota_elvira` y `parte_roque` para el cap. 3). Aún sin lector fuera de la mesa del consultorio.
+- `docs/capitulo_2.md`: reglas del puzle espacial, tres cruces, fallos y diálogo (orden corregido: Sira lee la placa y luego Ivo cuenta lo de su madre). `docs/plan_de_pruebas.md`: 20 comprobaciones con los controles reales.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

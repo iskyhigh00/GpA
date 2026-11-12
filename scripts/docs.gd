@@ -78,6 +78,63 @@ Operario herido: Orencio Vidal, ayudante de compuerta. Testigo: Paula Sedano, op
 Escuché tres golpes secos en el tope de la compuerta. Al revisar la marca, el indicador estaba alineado con “TOTAL”, no con “PARCIAL”. Informé a Elvira Roldal. Ordenó: “Anotar apertura parcial y cerrar el parte sin copia”. Al manipular el volante de cierre recibí golpe en la mano derecha. La compuerta siguió abierta hasta las 22:40. No se activó alarma.
 Firma: Orencio Vidal. Refrendo: Paula Sedano.""",
 	},
+	{
+		"id": "carta_ivo", "cap": 2,
+		"titulo": "CARTA DE IVO LUJÁN A SIRA CENDAL",
+		"texto": """Folio CR-2026-019 · Puerto Lumbre, 13/11/2026
+De: Ivo Luján, Casa 1, La Taza.
+A: Sira Cendal, inspectora.
+Asunto: censo del pontón 7.
+
+Sira: el censo que firmó en 2019 dice cero. Aquí vivimos doce familias. Cuarenta y una personas.
+La Casa 1 sigue en pie. El pontón 7 gira, pero el cabo de freno está en el norte. El manual dice sur. El freno está al norte. Compruébelo.
+La Taza no está vacía. Venga con el certificado.
+
+Firma: Ivo Luján.""",
+	},
+	{
+		"id": "nota_elvira", "cap": 3,
+		"titulo": "NOTA DE ELVIRA ROLDAL A ROQUE BELTRÁN",
+		"texto": """Folio ET-2026-081 · Puerto Lumbre, 13/11/2026, 22:50
+De: Elvira Roldal, jefa de El Telar.
+A: Roque Beltrán, capataz.
+Asunto: tercera señal de marea.
+
+La tercera señal se tocará cuando la intendenta lo ordene.
+La marca del tope indica total. Mantener el registro como parcial.
+La alarma queda vetada. No hay aviso a La Taza.
+
+Firma: Elvira Roldal.""",
+	},
+	{
+		"id": "parte_roque", "cap": 3,
+		"titulo": "PARTE DE TURNO DE ROQUE BELTRÁN",
+		"texto": """Folio TB-2026-090 · Puerto Lumbre, 13/11/2026, 22:30
+De: Roque Beltrán, capataz de cuadrillas.
+A: Elvira Roldal, jefa de El Telar.
+Asunto: parte de turno. Ensayo de descarga.
+
+Turno de 22:00 a 22:15. Manómetro en 6.8. Orden de sostener.
+Nadir Pons herido en antebrazo. Orencio Vidal herido en mano.
+El tope marcó total. Anoté parcial según orden.
+Sin más incidencias en el turno.
+
+Firma: Roque Beltrán.""",
+	},
+	{
+		"id": "circular", "cap": 2,
+		"titulo": "CIRCULAR DE INTENDENCIA",
+		"texto": """Folio IN-2026-205 · Puerto Lumbre, 14/11/2026, 01:00
+De: Oficina de Intendencia, Jefatura de Servicios.
+A: Todo el personal portuario.
+Asunto: cierre operativo del sector La Taza.
+
+La Taza queda cerrada como depósito de emergencia. Censo cero.
+No se permite el acceso a vecinos. No hay alarma vecinal.
+El pontón 7 queda fuera de servicio. El cabo de freno se guarda en intendencia.
+
+Firma: Oficina de Intendencia.""",
+	},
 ]
 
 
