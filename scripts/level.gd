@@ -809,11 +809,43 @@ func _build_world() -> void:
 	add_child(rail)
 	# Botiquín de servicio.
 	var kit := Gfx.solid_m(self, KIT_POS + Vector3(0.0, 0.6, 0.0), Vector3(1.0, 1.2, 0.6), Gfx.mat_gloss(Color(0.82, 0.85, 0.88), 0.4), 2)
-	for sz: Vector3 in [Vector3(0.5, 0.14, 0.04), Vector3(0.14, 0.5, 0.04)]:
+	kit.get_child(1).queue_free()
+	var steel := Gfx.mat_gloss(Color(0.55, 0.58, 0.6), 0.35)
+	var carcass := Gfx.box_m(Vector3(1.0, 1.2, 0.6), steel)
+	kit.add_child(carcass)
+	var inner := Gfx.box_m(Vector3(0.84, 0.86, 0.02), Gfx.mat_cloth(Color(0.08, 0.1, 0.1)))
+	inner.position = Vector3(0.0, -0.06, 0.305)
+	kit.add_child(inner)
+	for sy in [-0.3, 0.02, 0.32]:
+		var shelf := Gfx.box_m(Vector3(0.84, 0.03, 0.18), steel)
+		shelf.position = Vector3(0.0, sy, 0.22)
+		kit.add_child(shelf)
+		for i in 5:
+			var vial := Gfx.cyl_m(0.028, 0.12, Gfx.mat_glow(Color(0.8, 0.12, 0.18) if (i + int(sy * 10.0)) % 2 == 0 else Color(0.8, 0.55, 0.15), 0.8))
+			vial.position = Vector3(-0.32 + i * 0.16, sy + 0.075, 0.22)
+			kit.add_child(vial)
+	for off in [Vector3(0.0, 0.4, 0.0), Vector3(0.0, -0.46, 0.0)]:
+		var frame_h := Gfx.box_m(Vector3(0.92, 0.04, 0.04), steel)
+		frame_h.position = off + Vector3(0.0, 0.0, 0.31)
+		kit.add_child(frame_h)
+	for sx in [-0.45, 0.45]:
+		var frame_v := Gfx.box_m(Vector3(0.04, 0.9, 0.04), steel)
+		frame_v.position = Vector3(sx, -0.03, 0.31)
+		kit.add_child(frame_v)
+	for sz: Vector3 in [Vector3(0.24, 0.07, 0.03), Vector3(0.07, 0.24, 0.03)]:
 		var cross := Gfx.box_m(sz, Gfx.mat_glow(Color(0.85, 0.1, 0.15), 1.5))
-		cross.position = Vector3(0.0, 0.0, 0.33)
+		cross.position = Vector3(0.0, 0.5, 0.32)
 		kit.add_child(cross)
 		kit_cross.append(cross)
+	# Zócalo de madera oscura en el consultorio.
+	var wain := Gfx.mat_wood()
+	for w in [Vector4(-10.0, -3.96, 10.0, 0.06), Vector4(-10.0, 3.96, 10.0, 0.06)]:
+		var strip := Gfx.box_m(Vector3(w.z, 0.9, w.w), wain)
+		strip.position = Vector3(w.x, 0.45, w.y)
+		add_child(strip)
+	var strip_w := Gfx.box_m(Vector3(0.06, 0.9, 8.0), wain)
+	strip_w.position = Vector3(-14.97, 0.45, 0.0)
+	add_child(strip_w)
 	# Contrapeso y rejilla.
 	Gfx.solid_m(self, Vector3(19.7, 1.0, 0.0), Vector3(0.5, 2.0, 1.4), Gfx.mat_plate(), 2)
 	var pit := Gfx.box_m(Vector3(2.0, 0.1, 2.0), Gfx.mat_cloth(Color(0.0, 0.0, 0.0)))

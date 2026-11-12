@@ -424,3 +424,50 @@ static func fabric_normal() -> NoiseTexture2D:
 	var t := _noise_tex(31, 0.09, Color.BLACK, Color.WHITE, true, 128)
 	_mats["fabric_normal"] = t
 	return t
+
+
+## Hielo translúcido con el patrón del vidrio esmerilado.
+static func mat_ice() -> StandardMaterial3D:
+	if _mats.has("ice"):
+		return _mats["ice"]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.7, 0.88, 0.98, 0.62)
+	var path := "res://assets/texturas/glass_frosted_003/glass_frosted_003_diff_1k.jpg"
+	if ResourceLoader.exists(path):
+		m.albedo_texture = load(path)
+		m.uv1_scale = Vector3(1.0, 1.0, 1.0)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+	m.roughness = 0.12
+	m.emission_enabled = true
+	m.emission = Color(0.35, 0.55, 0.65)
+	m.emission_energy_multiplier = 0.35
+	_mats["ice"] = m
+	return m
+
+
+## Sombra de contacto blanda bajo un personaje (sirve en cualquier calidad de sombras).
+static func blob_shadow(radius: float) -> MeshInstance3D:
+	var key := "blob_shadow"
+	var m: StandardMaterial3D
+	if _mats.has(key):
+		m = _mats[key]
+	else:
+		var g := Gradient.new()
+		g.set_color(0, Color(0, 0, 0, 0.6))
+		g.set_color(1, Color(0, 0, 0, 0.0))
+		var tex := GradientTexture2D.new()
+		tex.gradient = g
+		tex.fill = GradientTexture2D.FILL_RADIAL
+		tex.fill_from = Vector2(0.5, 0.5)
+		tex.fill_to = Vector2(1.0, 0.5)
+		tex.width = 64
+		tex.height = 64
+		m = StandardMaterial3D.new()
+		m.albedo_texture = tex
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_mats[key] = m
+	var q := quad_m(Vector2(radius * 2.0, radius * 2.0), m)
+	q.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	q.position = Vector3(0.0, 0.025, 0.0)
+	return q

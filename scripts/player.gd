@@ -75,6 +75,7 @@ func _ready() -> void:
 	rig.root.position = Vector3(0.0, -0.9, 0.0)
 	roll_node.add_child(rig.root)
 	_add_gear()
+	add_child(Gfx.blob_shadow(0.55))
 	cam = Camera3D.new()
 	cam.top_level = true
 	cam.fov = 64.0

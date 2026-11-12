@@ -101,6 +101,10 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `docs/guia_de_estilo.md`: guía de DeepSeek con La Taza (barrio, no café) y El Telar (sala de bombas, no textil) corregidos.
 - Gemini solo entrega imágenes sueltas por el chat (no audio ni archivos); sus tareas de interfaz, introducción y vigía siguen pendientes.
 
+## Pasada visual (código)
+- Carro de hielo rehecho (`ice_cart.gd`): plataforma de tablones, chasis de acero (conserva `objective_material` para el pulso del marcador), 8 bloques de hielo translúcido (`Gfx.mat_ice`), ruedas con cubo, barra de empuje y carámbanos. Botiquín como armario con puerta de vidrio, estantes y frascos (la cruz sigue en `kit_cross`). Zócalo de madera en el consultorio. Sombras de contacto blandas (`Gfx.blob_shadow`) bajo Sira y los guardias.
+- Pendiente visual: personajes 3D (ChatGPT), utilería 3D (barril, farol, cadena, camilla, mesa…), kit de interfaz e ilustraciones de la introducción (Gemini), efectos de atmósfera (PR «chatgpt/atmosfera»).
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

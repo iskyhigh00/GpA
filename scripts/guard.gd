@@ -100,6 +100,7 @@ func _ready() -> void:
 	if rig == null:
 		rig = Rig.build(Color(0.8, 0.64, 0.55), Color(0.2, 0.24, 0.2), Color(0.12, 0.13, 0.13), Color(0.08, 0.08, 0.08), true)
 	visual.add_child(rig.root)
+	add_child(Gfx.blob_shadow(0.65))
 	var cap_mat := Gfx.mat_gloss(Color(0.12, 0.14, 0.17), 0.35)
 	baton_mat = Gfx.mat_glow(Color(0.9, 0.5, 0.15), 0.2).duplicate() as StandardMaterial3D
 	baton_mat.albedo_color = Color(0.2, 0.2, 0.23)
