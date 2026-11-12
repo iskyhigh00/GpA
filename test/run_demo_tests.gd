@@ -38,6 +38,8 @@ func _run() -> void:
 	await _t19_dialogue()
 	await _t20_docs_cap2()
 	await _t21_credits()
+	await _t22_arrow_buttons()
+	await _t23_labels()
 	await _t22_objective_markers()
 	await _t15_combat_fixes()
 	await _t23_hook_combo()
@@ -1198,4 +1200,48 @@ func _t21_credits() -> void:
 	touch(lv, 5, lv.hud.doc_button("close").get_center(), false)
 	check(not lv.hud.doc_visible and not paused, "se cierra y reanuda el juego")
 	check(lv.hud.settings_rect("credits").end.x < lv.hud.settings_rect("close").position.x + 10.0, "los botones Créditos y Cerrar no se solapan")
+	await free_level(lv)
+
+
+func _t22_arrow_buttons() -> void:
+	print("22) La flecha de objetivo no tapa botones")
+	var lv := await new_level()
+	var amp := lv.hud.button_center("ampoule")
+	var pts := PackedVector2Array([amp + Vector2(40, 0), amp + Vector2(30, -6), amp + Vector2(34, 0), amp + Vector2(30, 6)])
+	var out := lv.hud._clear_of_buttons(pts)
+	var center := Vector2.ZERO
+	for p in out:
+		center += p
+	center /= float(out.size())
+	var ok := true
+	var all := lv.hud.buttons()
+	for key: String in all:
+		var b: Dictionary = all[key]
+		var c: Vector2 = b["c"]
+		var r: float = b["r"]
+		if center.distance_to(c) < r:
+			ok = false
+	check(ok, "la flecha desplazada queda fuera de todos los botones")
+	var far := PackedVector2Array([Vector2(300, 300), Vector2(290, 294), Vector2(294, 300), Vector2(290, 306)])
+	check(lv.hud._clear_of_buttons(far) == far, "lejos de los botones no se mueve")
+	await free_level(lv)
+
+
+func _t23_labels() -> void:
+	print("23) Etiquetas de botones dentro del margen")
+	var lv := await new_level()
+	var all := lv.hud.buttons()
+	var area := lv.hud.safe_area().grow(-Hud.TEXT_OUTLINE)
+	for key: String in all:
+		var b: Dictionary = all[key]
+		var label: String = b["t"]
+		if float(b["r"]) < 30.0:
+			continue
+		var c: Vector2 = b["c"]
+		var w := maxf(float(b["r"]) * 2.0, 130.0)
+		var avail := minf(c.x + w * 0.5, area.end.x) - maxf(c.x - w * 0.5, area.position.x)
+		var fsize := Hud.CONTROL_LABEL_SIZE
+		while fsize > 14 and lv.hud.font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x > avail:
+			fsize -= 1
+		check(lv.hud.font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x <= avail, "la etiqueta «%s» cabe a %d px" % [label, fsize])
 	await free_level(lv)

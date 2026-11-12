@@ -81,6 +81,11 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `docs/tienda.md`: textos de tienda dentro de límites (título 19, subtítulo 28, corta 73 caracteres). Antes de publicar: licencias «sin verificar» (`docs/licencias.md`) y política de privacidad (permiso de Internet).
 - `docs/textos_interfaz.md`: qué se aprovechó y qué se descartó de la lista de objetivos, avisos y muertes.
 
+## PR 4-7 de ChatGPT (fusionados)
+- #4 marcadores de objetivo (flecha + pulso ámbar en bandeja y carro), #5 HUD con margen de 40 px y reinicio con pulsación larga de 0,6 s, #6 lámpara del paso norte (radio 4,4, 4,0 m/s: el sprint se detecta 10/10), #7 combo de tres golpes (Sword_Slash, Punch_Left, Punch_Right) y animación de muerte de 12 s.
+- Ajustes propios al integrar: la flecha de objetivo se aparta de los botones y las etiquetas de botones se encogen para caber dentro del margen (323 comprobaciones).
+- Siguiente: PR «ampliación oeste» (segunda lámpara, vigía y rejilla ruidosa) con `Level.expansion`.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

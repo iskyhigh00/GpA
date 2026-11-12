@@ -484,6 +484,29 @@ static func objective_arrow(camera: Camera3D, point: Vector3, size: Vector2) -> 
 		edge - direction * 4.0, edge - direction * 8.0 - side * 7.0]
 
 
+## Desplaza la flecha hacia arriba si quedaría sobre un botón táctil o su etiqueta.
+func _clear_of_buttons(points: PackedVector2Array) -> PackedVector2Array:
+	var center := Vector2.ZERO
+	for p in points:
+		center += p
+	center /= float(points.size())
+	var dy := 0.0
+	var all := buttons()
+	for _pass in 4:
+		for key: String in all:
+			var b: Dictionary = all[key]
+			var c: Vector2 = b["c"]
+			var r: float = b["r"]
+			if (center + Vector2(0.0, dy)).distance_to(c) < r + 36.0:
+				dy = c.y - r - 36.0 - center.y
+	if is_zero_approx(dy):
+		return points
+	var moved := PackedVector2Array()
+	for p in points:
+		moved.append(p + Vector2(0.0, dy))
+	return moved
+
+
 func _draw_objective_arrow(size: Vector2) -> void:
 	if level == null or settings_visible or doc_visible or dialog_visible or end_visible:
 		return
@@ -493,6 +516,7 @@ func _draw_objective_arrow(size: Vector2) -> void:
 	var points := objective_arrow(level.player.cam, target.global_position, size)
 	if points.is_empty():
 		return
+	points = _clear_of_buttons(points)
 	canvas.draw_colored_polygon(points, Color(0.98, 0.77, 0.42))
 	for i in points.size():
 		canvas.draw_line(points[i], points[(i + 1) % points.size()], Color(0.14, 0.09, 0.05), 1.5, true)
@@ -574,7 +598,12 @@ func _draw_controls(_vs: Vector2) -> void:
 			continue
 		var text_width := maxf(r * 2.0, 130.0)
 		var baseline := c.y + r * 0.58
-		_text(Vector2(c.x - text_width * 0.5, baseline), label, CONTROL_LABEL_SIZE,
+		var area := safe_area().grow(-TEXT_OUTLINE)
+		var avail := minf(c.x + text_width * 0.5, area.end.x) - maxf(c.x - text_width * 0.5, area.position.x)
+		var fsize := CONTROL_LABEL_SIZE
+		while fsize > 14 and font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x > avail:
+			fsize -= 1
+		_text(Vector2(c.x - text_width * 0.5, baseline), label, fsize,
 			Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, text_width)
 
 
