@@ -52,6 +52,7 @@ func _run() -> void:
 	await _west_metal_floor()
 	await _west_routes(false)
 	await _west_routes(true)
+	await _t32_atmosphere()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -1541,4 +1542,75 @@ func _t25_skyline() -> void:
 	print("25) Panorama del puerto")
 	var lv := await new_level()
 	check(ResourceLoader.exists("res://assets/arte/panorama_puerto.jpg") and lv.skyline_built, "el panorama nocturno rodea la lonja")
+	await free_level(lv)
+
+
+func _t32_atmosphere() -> void:
+	print("32) Atmósfera por zona y calidad")
+	var previous := Quality.level
+	Quality.level = 0
+	Quality.save()
+	var lv := await new_level(true, true)
+	var air := lv.atmosphere
+	check(air.steam.size() == 2 and air.drips.size() == 3 and air.dust.size() == 4,
+		"hay dos salidas de vapor, una gotera por zona y polvo en los cuatro vitrales")
+	var counts := [0, 0, 0]
+	for node in air.get_children():
+		var zone := int(node.get_meta("atmosphere_zone", -1))
+		if zone >= 0:
+			counts[zone] += 1
+	check(counts == [4, 7, 4] and counts.all(func(n: int) -> bool: return n + 1 <= 10),
+		"nodos por zona, incluida la parte común: %s" % str([counts[0] + 1, counts[1] + 1, counts[2] + 1]))
+	var actors: Array[Node3D] = [lv.player]
+	actors.append_array(lv.guards)
+	for actor in actors:
+		var shadow := actor.get_node_or_null("SombraContacto") as MeshInstance3D
+		check(shadow != null and shadow.visible and shadow.position.y > 0.0
+			and shadow.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF,
+			"la sombra de contacto de %s sigue activa en Baja" % actor.name)
+	var jet := air.steam[0]
+	var drip := air.drips[1]
+	jet.clock = jet.period - 0.02
+	drip.clock = drip.period - 0.02
+	air._process(0.05)
+	check(not air.effects_enabled and not air.dust[0].emitting and not jet.emitter.emitting
+		and not drip.drop.visible and not drip.splash.emitting and not drip.sound.playing,
+		"Baja suprime vapor, gota, salpicadura, audio puntual y polvo")
+	var warm := lv.quality_env.ambient_light_color
+	check(warm.is_equal_approx(PortAtmosphere.AMBIENT[PortAtmosphere.Zone.CLINIC]) and warm.r > warm.b,
+		"el consultorio empieza cálido incluso en Baja")
+	lv.player.position = Vector3(-3, 0.1, 0)
+	air._process(0.05)
+	var crossing := lv.quality_env.ambient_light_color
+	var cold := PortAtmosphere.AMBIENT[PortAtmosphere.Zone.MARKET]
+	check(not crossing.is_equal_approx(warm) and not crossing.is_equal_approx(cold)
+		and crossing.r < warm.r and crossing.b > warm.b, "al cruzar, el ambiente cambia de forma gradual")
+	air._process(3.0)
+	check(absf(lv.quality_env.ambient_light_color.b - cold.b) < 0.002, "la lonja converge al ambiente frío")
+	lv.player.position = Vector3(16, 0.1, 4)
+	air._process(3.0)
+	var green := lv.quality_env.ambient_light_color
+	check(green.g > green.r and green.g > green.b and lv.quality_env.fog_light_color.g > lv.quality_env.fog_light_color.r,
+		"el patio de la rejilla converge a verde en luz y niebla")
+	lv._cycle_quality()
+	check(Quality.level == 1 and air.effects_enabled and air.dust[0].emitting and air.dust[0].visible,
+		"Media activa el polvo localizado")
+	drip.clock = drip.period - 0.3
+	air._process(0.08)
+	check(drip.drop.visible and drip.drop.position.y > drip.floor.y and not drip.splash.emitting,
+		"la gota cae antes de salpicar")
+	jet.clock = jet.period - 0.02
+	drip.clock = drip.period - 0.02
+	air._process(0.05)
+	check(jet.emitter.emitting and jet.clock < 0.06, "el vapor se dispara en ráfagas periódicas")
+	check(drip.splash.emitting and not drip.drop.visible and drip.sound.stream is AudioStreamOggVorbis
+		and not (drip.sound.stream as AudioStreamOggVorbis).loop,
+		"al tocar el piso se dispara la salpicadura con la muestra de goteo posicional")
+	lv._cycle_quality()
+	check(Quality.level == 2 and air.effects_enabled and air.dust[0].emitting, "Alta conserva los efectos")
+	lv._cycle_quality()
+	check(Quality.level == 0 and not jet.emitter.visible and not drip.splash.visible and not air.dust[0].visible
+		and air.get_child_count() == 15, "volver a Baja apaga los efectos sin crear otros nodos")
+	Quality.level = previous
+	Quality.save()
 	await free_level(lv)

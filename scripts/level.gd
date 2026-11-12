@@ -53,6 +53,8 @@ var grate_plate: StaticBody3D
 var grate_shape: CollisionShape3D
 var grate_light: OmniLight3D
 var grate_steam: GPUParticles3D
+var market_mist: GPUParticles3D
+var atmosphere: PortAtmosphere
 const AUDIO_DIR := "res://assets/audio/juego/"
 const AMBIENCE: Array = [
 	["amb_mercado", -12.0], ["amb_olas", -10.0], ["amb_bomba", -20.0], ["amb_goteo", -14.0], ["amb_silbato", -18.0],
@@ -150,6 +152,8 @@ func _ready() -> void:
 	_build_environment()
 	Quality.load_saved()
 	Quality.apply(get_viewport(), quality_env)
+	atmosphere = PortAtmosphere.new()
+	atmosphere.name = "Atmosfera"
 	Gfx.capture_static_meshes = Gfx.headless
 	_build_world()
 	_build_skyline()
@@ -160,6 +164,9 @@ func _ready() -> void:
 	moving.append_array(kit_cross)
 	static_mesh_counts = StaticBatch.build(self, moving)
 	_build_entities()
+	add_child(atmosphere)
+	atmosphere.build(player, quality_env)
+	_apply_atmosphere_quality()
 	_build_hud()
 	_set_objective()
 	_start_audio()
@@ -388,7 +395,9 @@ func _window(pos: Vector3, rot_y: float, c: Color, beam_to: Vector3) -> void:
 	var ray := Gfx.beam(Color(c.r, c.g, c.b, 0.07))
 	Gfx.no_shadow(ray)
 	add_child(ray)
-	Gfx.place_beam(ray, pos + Vector3(0.0, 0.2, 0.0), beam_to, 0.9)
+	var beam_origin := pos + Vector3(0.0, 0.2, 0.0)
+	Gfx.place_beam(ray, beam_origin, beam_to, 0.9)
+	atmosphere.add_beam(beam_origin, beam_to, c)
 	var sp := SpotLight3D.new()
 	sp.position = pos + Vector3(0.0, 0.0, 0.0)
 	sp.light_color = c
@@ -596,31 +605,6 @@ func _build_gothic() -> void:
 func _build_particles() -> void:
 	if Gfx.headless:
 		return
-	var qm := StandardMaterial3D.new()
-	qm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	qm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	qm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	qm.albedo_color = Color(0.8, 0.9, 1.0, 0.35)
-	var quad := QuadMesh.new()
-	quad.size = Vector2(0.05, 0.05)
-	quad.material = qm
-	var dust := GPUParticles3D.new()
-	dust.amount = 40
-	dust.lifetime = 9.0
-	dust.preprocess = 9.0
-	dust.visibility_aabb = AABB(Vector3(-16.0, -2.0, -12.0), Vector3(32.0, 8.0, 24.0))
-	var pm := ParticleProcessMaterial.new()
-	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
-	pm.emission_box_extents = Vector3(14.0, 1.6, 9.0)
-	pm.direction = Vector3(0.4, 0.1, 0.1)
-	pm.spread = 180.0
-	pm.initial_velocity_min = 0.05
-	pm.initial_velocity_max = 0.25
-	pm.gravity = Vector3.ZERO
-	dust.process_material = pm
-	dust.draw_pass_1 = quad
-	dust.position = Vector3(9.0, 1.8, 0.0)
-	add_child(dust)
 	var sm := StandardMaterial3D.new()
 	sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	sm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
@@ -656,6 +640,7 @@ func _build_particles() -> void:
 	mist.draw_pass_1 = mq
 	mist.position = Vector3(9.0, 0.5, 0.0)
 	add_child(mist)
+	market_mist = mist
 	grate_steam = GPUParticles3D.new()
 	grate_steam.amount = 12
 	grate_steam.lifetime = 3.0
@@ -1331,7 +1316,7 @@ func open_grate() -> void:
 	grate_plate.visible = false
 	grate_light.light_energy = 2.0
 	if grate_steam:
-		grate_steam.emitting = true
+		grate_steam.emitting = Quality.level > 0
 	_set_objective()
 
 
@@ -1358,6 +1343,17 @@ func finish() -> void:
 func _cycle_quality() -> void:
 	Quality.cycle()
 	Quality.apply(get_viewport(), quality_env)
+	_apply_atmosphere_quality()
+
+
+func _apply_atmosphere_quality() -> void:
+	atmosphere.set_quality(Quality.level)
+	if market_mist != null:
+		market_mist.emitting = Quality.level > 0
+		market_mist.visible = Quality.level > 0
+	if grate_steam != null:
+		grate_steam.emitting = Quality.level > 0 and grate_open
+		grate_steam.visible = Quality.level > 0
 
 
 func _on_settings_toggled(open: bool) -> void:

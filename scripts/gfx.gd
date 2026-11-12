@@ -468,6 +468,7 @@ static func blob_shadow(radius: float) -> MeshInstance3D:
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		_mats[key] = m
 	var q := quad_m(Vector2(radius * 2.0, radius * 2.0), m)
+	q.name = "SombraContacto"
 	q.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
 	q.position = Vector3(0.0, 0.025, 0.0)
 	return q
