@@ -11,6 +11,7 @@ signal ampoule_pressed
 signal restart_pressed
 signal settings_toggled(open: bool)
 signal docs_toggled(open: bool)
+signal dialogue_finished
 signal update_pressed
 signal browser_pressed
 signal quality_pressed
@@ -50,6 +51,10 @@ var time := 0.0
 var vignette: GradientTexture2D
 var settings_visible := false
 var doc_visible := false
+var dialog_visible := false
+var dialog_lines: Array[String] = []
+var dialog_i := 0
+var dialog_t := 0.0
 var doc_list: Array[Dictionary] = []
 var doc_page := 0
 var version_text := "dev"
@@ -122,6 +127,49 @@ func settings_rect(which: String) -> Rect2:
 	return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 134.0, 400.0, 44.0)
 
 
+const DIALOG_AUTO := 5.0
+
+
+func dialog_panel() -> Rect2:
+	var vs := view_size()
+	return Rect2(vs.x * 0.5 - 480.0, vs.y - 224.0, 960.0, 176.0)
+
+
+func dialog_skip_rect() -> Rect2:
+	var pr := dialog_panel()
+	return Rect2(pr.end.x - 150.0, pr.position.y - 46.0, 150.0, 40.0)
+
+
+## Líneas con formato «Hablante|texto». Toque para avanzar; avanza solo a los 5 s; «Saltar» cierra.
+func open_dialogue(lines: Array[String]) -> void:
+	if lines.is_empty():
+		return
+	dialog_lines = lines
+	dialog_i = 0
+	dialog_t = 0.0
+	dialog_visible = true
+	get_tree().paused = true
+	touches.clear()
+	stick_index = -1
+	move_vec = Vector2.ZERO
+	held.clear()
+
+
+func advance_dialogue() -> void:
+	dialog_i += 1
+	dialog_t = 0.0
+	if dialog_i >= dialog_lines.size():
+		close_dialogue()
+
+
+func close_dialogue() -> void:
+	if not dialog_visible:
+		return
+	dialog_visible = false
+	get_tree().paused = false
+	dialogue_finished.emit()
+
+
 func doc_panel() -> Rect2:
 	var vs := view_size()
 	return Rect2(vs.x * 0.5 - 540.0, 36.0, 1080.0, vs.y - 72.0)
@@ -190,6 +238,10 @@ func show_end(lines: Array[String]) -> void:
 
 func _process(delta: float) -> void:
 	time += delta
+	if dialog_visible:
+		dialog_t += delta
+		if dialog_t >= DIALOG_AUTO:
+			advance_dialogue()
 	message_t = maxf(0.0, message_t - delta)
 	banner_t = maxf(0.0, banner_t - delta)
 	fade = move_toward(fade, fade_target, delta * 2.5)
@@ -229,6 +281,12 @@ func _press(index: int, pos: Vector2) -> void:
 	if end_visible:
 		if play_again_rect().has_point(pos):
 			play_again_pressed.emit()
+		return
+	if dialog_visible:
+		if dialog_skip_rect().has_point(pos):
+			close_dialogue()
+		else:
+			advance_dialogue()
 		return
 	if doc_visible:
 		if doc_button("prev").has_point(pos):
@@ -330,6 +388,8 @@ func _draw_ui() -> void:
 		_draw_settings(vs)
 	if doc_visible:
 		_draw_doc(vs)
+	if dialog_visible:
+		_draw_dialog(vs)
 
 
 func _draw_bar() -> void:
@@ -473,3 +533,21 @@ func _draw_doc(vs: Vector2) -> void:
 		var label := "<" if which == "prev" else (">" if which == "next" else "Cerrar")
 		canvas.draw_string(font, Vector2(r.position.x, r.position.y + 33.0), label, HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 26, paper)
 	canvas.draw_string(font, Vector2(pr.position.x + 250.0, pr.end.y - 30.0), "%d / %d" % [doc_page + 1, doc_list.size()], HORIZONTAL_ALIGNMENT_LEFT, 120.0, 22, ink)
+
+
+func _draw_dialog(vs: Vector2) -> void:
+	canvas.draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, 0.35))
+	var pr := dialog_panel()
+	canvas.draw_rect(pr, Color(0.04, 0.06, 0.09, 0.94))
+	canvas.draw_rect(pr, Color(0.8, 0.7, 0.45, 0.8), false, 3.0)
+	var parts := dialog_lines[dialog_i].split("|", true, 1)
+	var who := parts[0] if parts.size() > 1 else ""
+	var said := parts[1] if parts.size() > 1 else parts[0]
+	var col := Color(0.55, 0.85, 0.95) if who == "Sira" else Color(0.95, 0.8, 0.5)
+	canvas.draw_string(font, Vector2(pr.position.x + 28.0, pr.position.y + 40.0), who.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, 400.0, 24, col)
+	canvas.draw_multiline_string(font, Vector2(pr.position.x + 28.0, pr.position.y + 80.0), said, HORIZONTAL_ALIGNMENT_LEFT, pr.size.x - 56.0, 28, 3, Color(0.95, 0.95, 0.92))
+	canvas.draw_string(font, Vector2(pr.position.x + 28.0, pr.end.y - 12.0), "Toca para continuar   %d / %d" % [dialog_i + 1, dialog_lines.size()], HORIZONTAL_ALIGNMENT_LEFT, 500.0, 16, Color(0.7, 0.75, 0.8))
+	var sk := dialog_skip_rect()
+	canvas.draw_rect(sk, Color(0.2, 0.2, 0.25, 0.9))
+	canvas.draw_rect(sk, Color(1, 1, 1, 0.5), false, 2.0)
+	canvas.draw_string(font, Vector2(sk.position.x, sk.position.y + 28.0), "Saltar", HORIZONTAL_ALIGNMENT_CENTER, sk.size.x, 20, Color.WHITE)

@@ -62,6 +62,10 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `assets/modelos/` (glTF): `ancla` (Quaternius), `red_pesca` (Pixor), `gancho_carnicero` (OpenGameArt, 21 cm: se escala x3) y textura `glass_frosted_003` (3dtextures.me) usada en `Gfx.mat_glass()` para vitrales y ventana. Colocados en `Level._build_model_props()`. Fuentes en `assets/LEEME_complemento.txt`. Licencias CC0 afirmadas por ChatGPT; no verificadas por nosotros (revisar las fichas de Pixor, OpenGameArt y 3dtextures.me).
 - Aún no llegaron de la tanda 3: barriles, farol, cadenas, camilla y demás modelos, texturas extra, sonidos extra, música e iconos.
 
+## Diálogo inicial y pensamientos de Sira (de DeepSeek, corregidos)
+- `Hud.open_dialogue()`: panel de diálogo (toque avanza, 5 s auto, «Saltar»; pausa el árbol). `Level.INTRO` (8 líneas Tesa/Sira, se muestra al empezar, no en headless). `Level.think()` muestra 4 pensamientos de Sira una sola vez (`THOUGHTS`) y la línea final al abrirse la rejilla.
+- De la reescritura de DeepSeek NO integrado todavía: diseño del cap. 2 (aún mezcla ritmo; pone el freno al sur en un paso y al norte en el resto; quita la elección del cajón), folios nuevos (la carta de Ivo y la circular repiten la llave de la vitrina sin venir a cuento), dlg2 y plan de pruebas (ACCIÓN no abre la rejilla; no hay «golpe doble» sonoro ni folio CR-2026-019 en el juego).
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

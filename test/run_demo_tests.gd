@@ -29,6 +29,7 @@ func _run() -> void:
 	await _t16_decor()
 	await _t17_barks()
 	await _t18_models()
+	await _t19_dialogue()
 	await _t15_combat_fixes()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
@@ -656,4 +657,39 @@ func _t18_models() -> void:
 	for n in ["ancla", "red_pesca", "gancho_carnicero"]:
 		check(ResourceLoader.exists("res://assets/modelos/%s/%s.gltf" % [n, n]), "existe el modelo «%s»" % n)
 	check(Gfx.mat_glass(Color(0.4, 0.6, 1.0)).albedo_texture != null, "el vidrio esmerilado usa su textura")
+	await free_level(lv)
+
+
+func _t19_dialogue() -> void:
+	print("19) Diálogo inicial y pensamientos de Sira")
+	var lv := await new_level(false)
+	check(Level.INTRO.size() == 8 and Level.INTRO[0].begins_with("Tesa|"), "el diálogo inicial tiene 8 líneas entre Tesa y Sira")
+	check(Level.INTRO.any(func(l: String) -> bool: return l.contains("Sellen el paso Cendal también")), "incluye la frase de Roque de la muestra de sal")
+	lv.hud.open_dialogue(Level.INTRO)
+	check(lv.hud.dialog_visible and paused and lv.hud.dialog_i == 0, "abre el diálogo y pausa el juego")
+	var finished := [false]
+	lv.hud.dialogue_finished.connect(func() -> void: finished[0] = true)
+	touch(lv, 9, Vector2(640, 300), true)
+	touch(lv, 9, Vector2(640, 300), false)
+	check(lv.hud.dialog_i == 1, "un toque avanza a la siguiente línea")
+	lv.hud._process(5.2)
+	check(lv.hud.dialog_i == 2, "a los 5 s avanza solo")
+	var sk := lv.hud.dialog_skip_rect().get_center()
+	touch(lv, 10, sk, true)
+	touch(lv, 10, sk, false)
+	check(not lv.hud.dialog_visible and not paused and finished[0], "«Saltar» cierra y reanuda el juego")
+	lv.hud.open_dialogue(["Sira|Una sola línea."])
+	touch(lv, 11, Vector2(640, 300), true)
+	touch(lv, 11, Vector2(640, 300), false)
+	check(not lv.hud.dialog_visible and not paused, "al terminar la última línea se cierra solo")
+	# Pensamientos: una sola vez y sin pisar mensajes importantes.
+	lv.hud.message_t = 0.0
+	lv.think("entra")
+	check(lv.hud.last_message.contains("Huele a sal"), "pensamiento de entrada a la lonja")
+	lv.hud.say("Mensaje importante", 3.0)
+	lv.think("lampara")
+	check(lv.hud.last_message == "Mensaje importante" and lv.pending_thoughts.size() == 1, "un pensamiento espera si hay un mensaje importante")
+	lv.hud.message_t = 0.0
+	lv.think("entra")
+	check(lv.hud.last_message == "Mensaje importante", "un pensamiento no se repite")
 	await free_level(lv)

@@ -60,6 +60,24 @@ const BARKS: Dictionary = {
 	"ataque": ["Te tengo."],
 	"derrota": ["Te dije que pararas."],
 }
+const INTRO: Array[String] = [
+	"Tesa|Sira. Despertaste. No tenías pulso.",
+	"Sira|¿Qué me hiciste?",
+	"Tesa|Sangre y sal de junta. Lo que había.",
+	"Sira|Hay un vaso en la mesa.",
+	"Tesa|Sangre de un donante. Bebe cuando te falte reserva.",
+	"Tesa|En tu puño había sal con una frase de Roque: «Sellen el paso Cendal también».",
+	"Sira|Cendal. Es mi nombre. No sé qué puerta es.",
+	"Sira|Necesito un carro de hielo para el contrapeso de la salida de servicio.",
+]
+const THOUGHTS: Dictionary = {
+	"entra": "Huele a sal y a aceite.",
+	"lampara": "La lámpara de riel cambia de lote. La señal parpadea.",
+	"bandeja": "La bandeja de subasta rueda por el carril.",
+	"ruido": "El ruido atrae al guardia. Y a la lámpara.",
+}
+var thoughts_done: Dictionary = {}
+var pending_thoughts: Array = []
 var bark_i: Dictionary = {}
 var last_bark := ""
 var posters := 0
@@ -121,6 +139,8 @@ func _ready() -> void:
 	_build_hud()
 	_set_objective()
 	_start_audio()
+	if not Gfx.headless:
+		hud.open_dialogue(INTRO)
 
 
 func _exit_tree() -> void:
@@ -994,6 +1014,29 @@ func bark(kind: String) -> void:
 	hud.say("Guardia: «%s»" % last_bark, 2.2)
 
 
+## Pensamiento de Sira como subtítulo, una sola vez; si hay un mensaje importante en curso, espera.
+func think(id: String, delay: float = 0.0) -> void:
+	if thoughts_done.has(id) or not THOUGHTS.has(id):
+		return
+	if delay > 0.0:
+		pending_thoughts.append([delay, id])
+		return
+	if hud.message_t > 0.8:
+		pending_thoughts.append([1.0, id])
+		return
+	thoughts_done[id] = true
+	hud.say("Sira: «%s»" % str(THOUGHTS[id]), 3.0)
+
+
+func _tick_thoughts(delta: float) -> void:
+	for i in range(pending_thoughts.size() - 1, -1, -1):
+		var entry: Array = pending_thoughts[i]
+		entry[0] = float(entry[0]) - delta
+		if float(entry[0]) <= 0.0:
+			pending_thoughts.remove_at(i)
+			think(str(entry[1]))
+
+
 func on_guard_alert() -> void:
 	if hud.message_t < 1.0:
 		bark("alerta")
@@ -1032,6 +1075,7 @@ func do_action() -> void:
 		play("push")
 		play("tray_roll", -2.0)
 		hud.say("Empujas la bandeja por el carril…")
+		think("bandeja", 2.2)
 		return
 	if kit_available and flat_dist(p, KIT_POS) < 2.4:
 		kit_available = false
@@ -1191,6 +1235,7 @@ func _on_tray_arrived(pos: Vector3) -> void:
 	lamp.attract(pos)
 	guard.investigate(pos)
 	hud.say("¡Clang! La lámpara y el guardia miran hacia la bandeja.", 4.0)
+	think("ruido", 4.6)
 
 
 func _on_lamp_signal() -> void:
@@ -1199,6 +1244,7 @@ func _on_lamp_signal() -> void:
 		return
 	play("beep")
 	hud.show_banner("CAMBIO DE LOTE", 0.9)
+	think("lampara", 1.5)
 
 
 func _on_lamp_spotted() -> void:
@@ -1214,7 +1260,7 @@ func _on_cart_arrived() -> void:
 	play("thud")
 	play("gong", -4.0)
 	open_grate()
-	hud.say("La rejilla se abre. Baja por el hueco.", 4.0)
+	hud.say("Sira: «Oigo el golpe doble en el pozo. Bajo.»", 4.0)
 
 
 func _set_objective() -> void:
@@ -1265,6 +1311,7 @@ func _physics_process(delta: float) -> void:
 	if tutorial_step == 1:
 		hud.obj_ratio = cam_progress
 	_check_progress()
+	_tick_thoughts(delta)
 	_update_prompts()
 
 
@@ -1276,6 +1323,7 @@ func _check_progress() -> void:
 		checkpoint_saved = true
 		checkpoint = CHECK_POS
 		hud.say("Punto de control guardado.", 3.0)
+		think("entra", 3.6)
 		_set_objective()
 	if route == "" and p.x > DIVIDER_X + 0.4 and absf(p.z) > 3.0:
 		route = "norte" if p.z < 0.0 else "sur"
