@@ -44,6 +44,12 @@ func _run() -> void:
 	await _t15_combat_fixes()
 	await _t23_hook_combo()
 	await _t24_death_animation()
+	print("\nBase sin ampliación: %d comprobaciones, %d fallos" % [checks, fails])
+	await _west_lamp()
+	await _west_lookout()
+	await _west_metal_floor()
+	await _west_routes(false)
+	await _west_routes(true)
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -60,9 +66,10 @@ func check(cond: bool, msg: String) -> void:
 		print("  FAIL ", msg)
 
 
-func new_level(skip: bool = true) -> Level:
+func new_level(skip: bool = true, expansion: bool = false) -> Level:
 	monitor = Callable()
 	var lv := Level.new()
+	lv.expansion = expansion
 	root.add_child(lv)
 	await _frames(5)
 	if skip:
@@ -1245,3 +1252,260 @@ func _t23_labels() -> void:
 			fsize -= 1
 		check(lv.hud.font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fsize).x <= avail, "la etiqueta «%s» cabe a %d px" % [label, fsize])
 	await free_level(lv)
+
+
+# ---------------------------------------------------------------- ampliación oeste
+
+func _west_walk(lv: Level, points: Array[Vector3], pace: float = 1.0) -> bool:
+	var p := lv.player
+	for target in points:
+		var reached := false
+		for frame in 1500:
+			if lv.done:
+				p.sim_move = Vector2.ZERO
+				return true
+			var to := target - p.global_position
+			to.y = 0.0
+			if to.length() < 0.27:
+				reached = true
+				break
+			var dir := to.normalized()
+			p.sim_move = Vector2(dir.dot(p.cam_right()), -dir.dot(p.cam_forward())) * pace
+			await physics_frame
+		if not reached:
+			print("    destino: ", target, " · posición: ", p.global_position)
+			p.sim_move = Vector2.ZERO
+			return false
+	p.sim_move = Vector2.ZERO
+	return true
+
+
+func _west_lamp() -> void:
+	print("27) Ampliación: lámpara de desembarco")
+	var lv := await new_level(true, true)
+	await through_door(lv)
+	var lamp := lv.dock_lamp
+	check(lv.guards.size() == 2 and lv.guards[0] == lv.guard and lv.guards[1] == lv.lookout,
+		"el guardia sur se conserva y el vigía ocupa la segunda posición")
+	check(lamp.axis == Vector3.BACK and lamp.rail_origin.x == 1.0 and lamp.start == -8.0 and lamp.end == 8.0
+		and lamp.radius == 2.0 and lamp.speed == 4.0 and lamp.wait_time == 1.0 and lamp.signal_time == 0.9,
+		"la lámpara barre z de −8 a 8 con el radio y las pausas indicadas")
+	var detections := [0]
+	lamp.spotted.connect(func() -> void: detections[0] += 1)
+	lv.request_restart()
+	check(await until(func() -> bool: return not lv.dying, 60), "reaparece antes de los intentos")
+	await _frames(750)
+	check(detections[0] == 0 and lv.lookout.alert_count == 0 and lv.lookout.state == Guard.S.PATROL,
+		"ni el haz ni el vigía alertan en el punto de control")
+	check(not lv.lookout.can_see(Level.CHECK_POS) and Guard.LOOKOUT_PATROL.all(
+		func(point: Vector3) -> bool: return lv.flat_dist(point, Level.CHECK_POS) > 8.0),
+		"los cuatro puntos de patrulla quedan a más de 8 m del punto de control")
+
+	# Aislamos las colisiones de los guardias sin desactivar el evento de investigación.
+	lv.guard.set_physics_process(false)
+	lv.lookout.set_physics_process(false)
+	var cycle := 2.0 * (lamp.wait_time + lamp.signal_time + (lamp.end - lamp.start) / lamp.speed)
+	var detected := 0
+	var crossed := 0
+	var investigated := 0
+	for attempt in 10:
+		lv.player.respawn_at(Level.CHECK_POS)
+		lv.lookout.reset()
+		lamp.reset()
+		await _frames(roundi(cycle * 60.0 * (attempt + 0.5) / 10.0))
+		lv.player.respawn_at(Vector3(Level.DOOR_X + 0.4, 0.1, 0.0))
+		var before: int = detections[0]
+		if await _west_walk(lv, [Vector3(-2.5, 0.1, 4.2), Vector3(0.8, 0.1, 4.2),
+				Vector3(0.8, 0.1, -6.5), Vector3(10.8, 0.1, -6.5)]):
+			crossed += 1
+		if detections[0] > before:
+			detected += 1
+			if lv.lookout.state == Guard.S.INVESTIGATE and lv.lookout.alert_count == 0:
+				investigated += 1
+	check(crossed == 10 and lv.tray.state == Tray.S.READY, "diez sprints desde la puerta por el carril hasta el paso norte")
+	check(detected >= 7, "la lámpara de desembarco detecta %d/10 sprints sin bandeja" % detected)
+	check(investigated == detected, "el aviso del haz inicia investigación sin poner al vigía en persecución")
+	await free_level(lv)
+
+
+func _west_lookout() -> void:
+	print("28) Ampliación: vigía, gancho y embestida")
+	var lv := await new_level(true, true)
+	await through_door(lv)
+	var p := lv.player
+	var g := lv.lookout
+	check(g.patrol_points.size() == 4 and g.patrol_wait == 2.0 and g.walk_speed == 1.5 and g.chase_speed == 3.2
+		and g.sight_range == 6.0 and g.sight_half == 0.6 and g.disarm_hits == 3,
+		"el vigía tiene circuito, pausa, velocidades, cono y resistencia propios")
+	var visited := {}
+	for frame in 1450:
+		if g.waiting and g.state == Guard.S.PATROL:
+			visited[g.pi] = true
+		if visited.size() == 4:
+			break
+		await physics_frame
+	check(visited.size() == 4 and g.alert_count == 0, "patrulla y se detiene en los cuatro puntos")
+	p.respawn_at(lv.tray.start_pos() + Vector3.UP * 0.1)
+	lv.do_action()
+	check(await until(func() -> bool: return lv.tray.state == Tray.S.SPENT, 220)
+		and g.state == Guard.S.INVESTIGATE and g.target.is_equal_approx(lv.tray.noise_pos() + Vector3.UP * 0.1),
+		"el impacto de la bandeja atrae al vigía")
+	lv.guard.stand_down()
+	g.set_physics_process(false)
+	p.respawn_at(Vector3(4.0, 0.1, 5.8))
+	for hit in 3:
+		g.global_position = Vector3(5.65, 0.1, 5.8)
+		g.state = Guard.S.CHASE
+		p.do_hook()
+		check(await until(func() -> bool: return g.hits == hit + 1, 20), "el gancho alcanza al vigía en el contacto %d" % (hit + 1))
+		if hit < 2:
+			check(g.state == Guard.S.STUNNED, "el vigía conserva su arma tras %d contactos" % (hit + 1))
+		await until(func() -> bool: return p.hook_cd <= 0.0, 70)
+	check(g.state == Guard.S.DISARMED and g.hits == 3 and g.swings_seen == 3 and lv.guard.hits == 0
+		and is_equal_approx(lv.reserve, 94.0), "tres golpes cuestan 6 y desarman al vigía sin bloqueo ni daño al guardia sur")
+
+	g.reset()
+	g.set_physics_process(true)
+	g.global_position = Vector3(3.0, 0.1, 5.8)
+	p.respawn_at(Vector3(5.1, 0.1, 5.8))
+	g.alert(p.global_position)
+	var before := lv.reserve
+	check(await until(func() -> bool: return g.state == Guard.S.WINDUP, 20)
+		and g.charge_line.visible and is_equal_approx(g.timer, 0.7), "la embestida anuncia 0,7 s con una línea roja")
+	await _frames(34)
+	check(lv.reserve == before and g.charge_line.visible, "el aviso no causa daño antes de la embestida")
+	check(await until(func() -> bool: return p.knockdown_t > 0.0, 65)
+		and is_equal_approx(lv.reserve, before - 14.0) and absf(p.knockdown_t - 0.8) < 0.04,
+		"la embestida conectada quita 14 y derriba durante 0,8 s")
+	var fallen := p.global_position
+	p.sim_move = Vector2(0, -1)
+	p.do_hook()
+	p.do_dodge()
+	await _frames(30)
+	check(p.knockdown_t > 0.0 and p.dodge_t == 0.0 and p.swing_t == 0.0 and lv.flat_dist(p.global_position, fallen) < 0.08,
+		"el derribo bloquea el desplazamiento, el gancho y la esquiva")
+	p.sim_move = Vector2.ZERO
+	check(await until(func() -> bool: return p.knockdown_t <= 0.0, 30), "la inmovilización termina")
+	g.reset()
+	g.global_position = Vector3(3.0, 0.1, 5.8)
+	p.respawn_at(Vector3(5.1, 0.1, 5.8))
+	p.facing = PI * 0.5
+	g.alert(p.global_position)
+	before = lv.reserve
+	check(await until(func() -> bool: return g.state == Guard.S.WINDUP and g.timer < 0.07, 70), "espera hasta el final del aviso")
+	p.do_dodge()
+	check(await until(func() -> bool: return g.state == Guard.S.STUNNED, 30)
+		and absf(g.timer - 1.1) < 0.04 and lv.reserve == before and p.knockdown_t == 0.0,
+		"una esquiva a tiempo aturde al vigía 1,1 s y evita daño y derribo")
+	await free_level(lv)
+
+
+func _west_metal_floor() -> void:
+	print("29) Ampliación: suelo ruidoso")
+	var lv := await new_level(true, true)
+	await through_door(lv)
+	lv.guard.set_physics_process(false)
+	lv.lookout.set_physics_process(false)
+	lv.dock_lamp.set_physics_process(false)
+	var p := lv.player
+	p.respawn_at(Vector3(5.0, 0.1, 2.4))
+	check(await _west_walk(lv, [Vector3(5.0, 0.1, -2.4)], 0.42)
+		and lv.lookout.state == Guard.S.PATROL and lv.metal_noise_cooldown == 0.0,
+		"caminar por debajo de 2,5 m/s no delata a Sira")
+	check(await _west_walk(lv, [Vector3(5.0, 0.1, 0.0)])
+		and lv.lookout.state == Guard.S.INVESTIGATE and lv.lookout.target.z < -1.5
+		and lv.metal_noise_cooldown > 1.0 and lv.variants.has("paso_metal_mojado"),
+		"correr sobre las placas activa paso_metal_mojado y comunica el punto")
+	var source := lv.lookout.target
+	check(await _west_walk(lv, [Vector3(5.0, 0.1, 1.8)]) and lv.lookout.target == source,
+		"el ruido no se repite dentro de los dos segundos")
+	await _frames(125)
+	check(await _west_walk(lv, [Vector3(5.0, 0.1, -1.2)]) and lv.lookout.target != source,
+		"tras el cooldown se puede oír otra pisada")
+	await free_level(lv)
+
+
+func _west_read_and_enter(lv: Level) -> float:
+	var frames := 0
+	lv.hud.open_dialogue(Level.INTRO)
+	while lv.hud.dialog_visible and frames < 2500:
+		await physics_frame
+		frames += 1
+	check(not lv.hud.dialog_visible, "deja que termine el diálogo inicial")
+	var at_desk := await _west_walk(lv, [Vector3(-12.0, 0.1, 2.6)], 0.4)
+	lv.do_action()
+	check(at_desk and lv.hud.doc_visible and lv.hud.doc_list.size() == 2, "llega a la mesa y abre los dos folios")
+	if lv.hud.doc_visible:
+		for page in lv.hud.doc_list.size():
+			var doc: Dictionary = lv.hud.doc_list[page]
+			var text := ("%s %s" % [doc["titulo"], doc["texto"]]).replace("\n", " ")
+			var read_frames := ceili(text.split(" ", false).size() * 3600.0 / 145.0)
+			await _frames(read_frames)
+			frames += read_frames
+			var button := "next" if page + 1 < lv.hud.doc_list.size() else "close"
+			var position := lv.hud.doc_button(button).get_center()
+			touch(lv, 41, position, true)
+			touch(lv, 41, position, false)
+	lv._on_cam_drag(Vector2(280.0, 0.0))
+	var reached := await _west_walk(lv, [Vector3(-10.7, 0.1, 0.0), Vector3(-3.0, 0.1, 0.0)], 0.45)
+	check(reached and lv.checkpoint_saved, "sale del consultorio a paso de exploración")
+	return frames / 60.0
+
+
+func _west_routes(calm: bool) -> void:
+	print("31) Ampliación: recorridos de exploración" if calm else "30) Ampliación: recorridos directos")
+	var total := 0.0
+	for side: String in ["norte", "sur"]:
+		var lv := await new_level(not calm, true)
+		var reading := 0.0
+		if calm:
+			reading = await _west_read_and_enter(lv)
+		else:
+			await through_door(lv)
+		var spots := [0]
+		lv.dock_lamp.spotted.connect(func() -> void: spots[0] += 1)
+		var lamp := lv.dock_lamp
+		var ok := true
+		if calm:
+			ok = await _west_walk(lv, [Vector3(-3.2, 0.1, -8.2), Vector3(-3.2, 0.1, 0.0)], 0.36)
+		ok = ok and await _west_walk(lv, [Vector3(-3.2, 0.1, 8.2)], 0.45 if calm else 0.55)
+		var signal_before_crossing := func() -> bool:
+			return lamp.state == RailLamp.S.SIGNAL and lamp.going_to_b
+		ok = ok and await until(signal_before_crossing, 750)
+		if calm:
+			var signal_number := lamp.signals_emitted
+			await _frames(60)
+			var full_sweep := func() -> bool:
+				return signal_before_crossing.call() and lamp.signals_emitted >= signal_number + 2
+			ok = ok and await until(full_sweep, 750)
+			check(ok, "%s: reconoce la hilera y observa un barrido completo antes de cruzar" % side)
+		lv.do_action()
+		ok = ok and await _west_walk(lv, [Vector3(-2.5, 0.1, 4.2), Vector3(4.4, 0.1, 4.2)], 0.85)
+		check(ok and spots[0] == 0 and lv.tray.state != Tray.S.READY,
+			"%s: espera la señal, usa la bandeja y cruza la lámpara sin detección" % side)
+		if side == "norte":
+			ok = ok and await _west_walk(lv, [Vector3(4.4, 0.1, 2.15), Vector3(3.45, 0.1, 1.6)], 0.45)
+			ok = ok and await _west_walk(lv, [Vector3(3.45, 0.1, -6.5), Vector3(10.8, 0.1, -6.5)], 0.95)
+			check(ok and lv.lamp.state == RailLamp.S.ATTRACTED and lv.lamp.t > 0.0,
+				"norte: cruza antes de que se agoten los ocho segundos de distracción")
+			ok = ok and await _west_walk(lv, [Vector3(13.0, 0.1, -5.0), Vector3(14.0, 0.1, -2.0)], 0.95)
+		else:
+			ok = ok and await _west_walk(lv, [Vector3(5.65, 0.1, 2.5), Vector3(5.65, 0.1, 0.0),
+				Vector3(8.2, 0.1, 0.0)], 0.45)
+			ok = ok and await _west_walk(lv, [Vector3(8.2, 0.1, 5.6), Vector3(10.8, 0.1, 5.6),
+				Vector3(13.0, 0.1, 4.0), Vector3(14.0, 0.1, 2.0)], 0.95)
+		check(ok and lv.route == side and not lv.combat and is_equal_approx(lv.reserve, 100.0),
+			"%s: llega al carro sin combatir ni gastar reserva (reserva %d)" % [side, int(lv.reserve)])
+		lv.try_force()
+		ok = ok and await until(func() -> bool: return lv.grate_open, 220)
+		ok = ok and await _west_walk(lv, [Vector3(15.0, 0.1, 2.5), Vector3(17.0, 0.1, 4.5)], 0.65)
+		check(ok and await until(func() -> bool: return lv.done, 90)
+			and lv.hud.end_visible and not lv.combat and is_equal_approx(lv.reserve, 65.0),
+			"%s: termina por la rejilla con 65 de reserva" % side)
+		print("    Duración simulada %s: %.2f s (%.2f s de juego, %.2f s de diálogo y lectura)" %
+			[side, lv.elapsed + reading, lv.elapsed, reading])
+		total += lv.elapsed + reading
+		await free_level(lv)
+	print("    Promedio de los dos recorridos: %.2f s" % (total / 2.0))
+	if calm:
+		check(total / 2.0 >= 180.0 and total / 2.0 <= 240.0, "el perfil de exploración y lectura promedia entre 3 y 4 minutos")

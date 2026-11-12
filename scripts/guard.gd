@@ -3,7 +3,7 @@ extends CharacterBody3D
 ## Guardia del Telar: patrulla el paso sur, ve con cono y línea de vista, investiga ruidos,
 ## persigue y alterna golpe corto, golpe pesado (señalado en el piso) y bloqueo.
 
-enum S { PATROL, INVESTIGATE, CHASE, WINDUP, STUNNED, DISARMED, STANDDOWN, BLOCK }
+enum S { PATROL, INVESTIGATE, CHASE, WINDUP, STUNNED, DISARMED, STANDDOWN, BLOCK, CHARGING }
 
 signal hit_taken(hits: int)
 
@@ -23,8 +23,27 @@ const GRAVITY := 24.0
 const CONE_SEGS := 12
 const HOME := Vector3(8.0, 0.1, 6.5)
 const PATROL_PTS: Array[Vector3] = [Vector3(6.0, 0.1, 6.5), Vector3(12.5, 0.1, 6.5)]
+const LOOKOUT_PATROL: Array[Vector3] = [
+	Vector3(5.8, 0.1, 8.8), Vector3(2.8, 0.1, 8.8),
+	Vector3(2.8, 0.1, 6.2), Vector3(5.8, 0.1, 6.2),
+]
+const CHARGE_WARNING := 0.7
+const CHARGE_DISTANCE := 3.0
+const CHARGE_SPEED := 8.0
+const CHARGE_DAMAGE := 14.0
+const KNOCKDOWN_TIME := 0.8
 
 var level: Level
+var lookout := false
+var patrol_points := PATROL_PTS
+var patrol_wait := 1.0
+var walk_speed := WALK_SPEED
+var chase_speed := CHASE_SPEED
+var sight_range := SIGHT_RANGE
+var sight_half := SIGHT_HALF
+var disarm_hits := 2
+var charge_direction := Vector3.ZERO
+var charge_line: MeshInstance3D
 var state: S = S.PATROL
 var hits := 0
 var damage_taken := 0.0
@@ -58,18 +77,26 @@ var lantern: OmniLight3D
 
 
 func _ready() -> void:
+	if lookout:
+		patrol_points = LOOKOUT_PATROL
+		patrol_wait = 2.0
+		walk_speed = 1.5
+		chase_speed = 3.2
+		sight_range = 6.0
+		sight_half = 0.6
+		disarm_hits = 3
 	collision_layer = 8
 	collision_mask = 7
 	var cs := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
-	cap.radius = 0.4
+	cap.radius = 0.46 if lookout else 0.4
 	cap.height = 1.8
 	cs.shape = cap
 	cs.position = Vector3(0.0, 0.9, 0.0)
 	add_child(cs)
 	visual = Node3D.new()
 	add_child(visual)
-	rig = ModelRig.build_model("res://assets/personajes/Guardia_de_la_Lonja.gltf", 1.0, 1.08)
+	rig = ModelRig.build_model("res://assets/personajes/Guardia_de_la_Lonja.gltf", 1.06 if lookout else 1.0, 1.24 if lookout else 1.08)
 	if rig == null:
 		rig = Rig.build(Color(0.8, 0.64, 0.55), Color(0.2, 0.24, 0.2), Color(0.12, 0.13, 0.13), Color(0.08, 0.08, 0.08), true)
 	visual.add_child(rig.root)
@@ -108,6 +135,11 @@ func _ready() -> void:
 	Gfx.no_shadow(ring)
 	ring.top_level = true
 	add_child(ring)
+	if lookout:
+		charge_line = Gfx.beam(Color(0.95, 0.08, 0.05, 0.84))
+		Gfx.no_shadow(charge_line)
+		charge_line.top_level = true
+		add_child(charge_line)
 	cone = MeshInstance3D.new()
 	Gfx.no_shadow(cone)
 	cone_mat = Gfx.glow_mat(Color(1.0, 0.9, 0.3, 0.25))
@@ -126,21 +158,22 @@ func reset() -> void:
 	swings_seen = 0
 	chasing_session = false
 	detect = 0.0
-	pi = 1
-	timer = 0.0
-	waiting = false
+	pi = 0 if lookout else 1
+	timer = patrol_wait if lookout else 0.0
+	waiting = lookout
 	attack_cd = 0.0
 	lost_t = 0.0
 	path_t = 0.0
 	knock = Vector3.ZERO
-	yaw = -PI * 0.5
-	global_position = HOME
+	yaw = PI * 0.5 if lookout else -PI * 0.5
+	global_position = patrol_points[0] if lookout else HOME
 	velocity = Vector3.ZERO
 	baton.visible = true
 	dropped.visible = false
-	ring.visible = false
+	_hide_attack_warning()
 	baton_mat.emission_energy_multiplier = 0.2
 	visual.rotation.y = yaw
+	visual.rotation.x = 0.0
 	last_state = S.PATROL
 	rig.reset_pose()
 
@@ -154,7 +187,7 @@ func take_hit(finisher: bool = false) -> bool:
 		return false
 	swings_seen += 1
 	var away := _flat_to(level.player.global_position)
-	if state == S.CHASE and swings_seen % 3 == 0:
+	if not lookout and state == S.CHASE and swings_seen % 3 == 0:
 		state = S.BLOCK
 		timer = 0.7
 		level.on_guard_block(global_position + Vector3(0.0, 1.2, 0.0))
@@ -164,11 +197,12 @@ func take_hit(finisher: bool = false) -> bool:
 	damage_taken += FINISHER_DAMAGE if finisher else 1.0
 	hit_taken.emit(hits)
 	level.on_guard_hit(global_position + Vector3(0.0, 1.3, 0.0), finisher)
-	ring.visible = false
+	_hide_attack_warning()
 	baton_mat.emission_energy_multiplier = 0.2
 	if away.length() > 0.05:
-		knock = -away.normalized() * (6.5 if finisher else 5.0)
-	if damage_taken >= DISARM_DAMAGE:
+		var impulse := (3.5 if finisher else 2.6) if lookout else (6.5 if finisher else 5.0)
+		knock = -away.normalized() * impulse
+	if (hits >= disarm_hits if lookout else damage_taken >= DISARM_DAMAGE):
 		level.bark("derrota")
 		state = S.DISARMED
 		velocity = Vector3.ZERO
@@ -184,10 +218,10 @@ func take_hit(finisher: bool = false) -> bool:
 
 
 func stagger(secs: float) -> void:
-	if state == S.WINDUP or state == S.CHASE:
+	if state == S.WINDUP or state == S.CHASE or state == S.CHARGING:
 		state = S.STUNNED
 		timer = secs
-		ring.visible = false
+		_hide_attack_warning()
 		baton_mat.emission_energy_multiplier = 0.2
 
 
@@ -209,12 +243,12 @@ func stand_down() -> void:
 	velocity = Vector3.ZERO
 	detect = 0.0
 	chasing_session = false
-	ring.visible = false
+	_hide_attack_warning()
 	baton_mat.emission_energy_multiplier = 0.2
 
 
 func alert(pos: Vector3) -> void:
-	if state == S.DISARMED or state == S.STANDDOWN or state == S.STUNNED or state == S.WINDUP or state == S.BLOCK:
+	if state == S.DISARMED or state == S.STANDDOWN or state == S.STUNNED or state == S.WINDUP or state == S.BLOCK or state == S.CHARGING:
 		return
 	_begin_session()
 	if state != S.CHASE:
@@ -240,11 +274,11 @@ func _flat_to(p: Vector3) -> Vector3:
 func can_see(p: Vector3) -> bool:
 	var to := _flat_to(p)
 	var d := to.length()
-	if d > SIGHT_RANGE:
+	if d > sight_range or (lookout and p.x >= Level.DIVIDER_X):
 		return false
-	if d > NEAR_SIGHT:
+	if d > 0.05 and (lookout or d > NEAR_SIGHT):
 		var fwd := Vector3(-sin(yaw), 0.0, -cos(yaw))
-		if fwd.dot(to / d) < cos(SIGHT_HALF):
+		if fwd.dot(to / d) < cos(sight_half):
 			return false
 	var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0.0, 1.4, 0.0), p + Vector3(0.0, 1.0, 0.0), 1)
 	return get_world_3d().direct_space_state.intersect_ray(q).is_empty()
@@ -295,6 +329,11 @@ func _physics_process(delta: float) -> void:
 			_chase(sees, pp, delta)
 		S.WINDUP:
 			_windup(pp, delta)
+		S.CHARGING:
+			var speed := minf(CHARGE_SPEED, minf(timer * CHARGE_SPEED, _charge_reach()) / delta)
+			timer -= delta
+			velocity.x = charge_direction.x * speed
+			velocity.z = charge_direction.z * speed
 		S.BLOCK:
 			_face(pp, delta)
 			timer -= delta
@@ -317,12 +356,24 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y -= GRAVITY * delta
 	move_and_slide()
+	if state == S.CHARGING:
+		_check_charge_contact(pp)
 	visual.rotation.y = yaw
+	if lookout:
+		visual.rotation.x = lerpf(visual.rotation.x, -0.22 if state == S.CHARGING else 0.0, minf(1.0, 12.0 * delta))
 	_animate(delta)
 	_update_cone()
 
 
 func _windup(pp: Vector3, delta: float) -> void:
+	if lookout:
+		timer -= delta
+		if timer <= 0.0:
+			_hide_attack_warning()
+			state = S.CHARGING
+			timer = _charge_reach() / CHARGE_SPEED
+			rig.oneshot("Punch_Right", 0.26, 1.6)
+		return
 	_face(pp, delta)
 	timer -= delta
 	var pulse := 2.0 + 3.0 * absf(sin(timer * 18.0))
@@ -351,7 +402,7 @@ func _windup(pp: Vector3, delta: float) -> void:
 		attack_cd = 1.3
 
 
-func _strike(dmg: float) -> void:
+func _strike(dmg: float, knockdown: float = 0.0) -> void:
 	if not level.clear_line(global_position, level.player.global_position):
 		return
 	if level.player.invuln > 0.0:
@@ -359,7 +410,41 @@ func _strike(dmg: float) -> void:
 		state = S.STUNNED
 		timer = 1.1
 	else:
-		level.hurt_player(dmg)
+		level.hurt_player(dmg, knockdown)
+
+
+func _hide_attack_warning() -> void:
+	ring.hide()
+	if charge_line != null:
+		charge_line.hide()
+
+
+func _charge_reach() -> float:
+	if charge_direction.x <= 0.0:
+		return CHARGE_DISTANCE
+	return clampf((Level.DIVIDER_X - 0.46 - global_position.x) / charge_direction.x, 0.0, CHARGE_DISTANCE)
+
+
+func _start_charge_warning(pp: Vector3) -> void:
+	charge_direction = _flat_to(pp).normalized()
+	yaw = atan2(-charge_direction.x, -charge_direction.z)
+	state = S.WINDUP
+	timer = CHARGE_WARNING
+	var origin := Vector3(global_position.x, 0.055, global_position.z)
+	Gfx.place_beam(charge_line, origin, origin + charge_direction * _charge_reach(), 0.13)
+	charge_line.show()
+
+
+func _check_charge_contact(pp: Vector3) -> void:
+	var to := _flat_to(pp)
+	var contact := to.length() <= 1.05 and to.dot(charge_direction) >= -0.1 and pp.x < Level.DIVIDER_X
+	if contact and level.clear_line(global_position, pp):
+		state = S.CHASE
+		_strike(CHARGE_DAMAGE, KNOCKDOWN_TIME)
+		attack_cd = 1.7
+	elif timer <= 0.0 or is_on_wall():
+		state = S.CHASE
+		attack_cd = 1.7
 
 
 func _animate(delta: float) -> void:
@@ -367,10 +452,10 @@ func _animate(delta: float) -> void:
 	if rig.is_model:
 		_animate_model(delta, hs)
 		return
-	rig.locomotion(delta, hs, CHASE_SPEED)
+	rig.locomotion(delta, hs, chase_speed)
 	match state:
 		S.WINDUP:
-			var total := 0.9 if slam else 0.45
+			var total := CHARGE_WARNING if lookout else (0.9 if slam else 0.45)
 			rig.arm_r.rotation.x = lerpf(0.4, 2.8, 1.0 - clampf(timer / total, 0.0, 1.0))
 			rig.body.rotation.x = 0.25
 		S.BLOCK:
@@ -399,17 +484,17 @@ func _animate_model(delta: float, hs: float) -> void:
 		last_state = state
 	match state:
 		S.WINDUP:
-			var total := 0.9 if slam else 0.45
-			rig.scrub("Sword_Slash", lerpf(0.0, 0.45, 1.0 - clampf(timer / total, 0.0, 1.0)))
+			var total := CHARGE_WARNING if lookout else (0.9 if slam else 0.45)
+			rig.scrub("Punch_Right" if lookout else "Sword_Slash", lerpf(0.0, 0.45, 1.0 - clampf(timer / total, 0.0, 1.0)))
 		S.BLOCK:
 			rig.scrub("Sword_Slash", 0.3)
 		S.STUNNED, S.DISARMED:
 			if rig.lock_t > 0.0:
-				rig.locomotion(delta, 0.0, CHASE_SPEED)
+				rig.locomotion(delta, 0.0, chase_speed)
 			else:
 				rig.scrub("HitRecieve" if state == S.STUNNED else "HitRecieve_2", 0.98)
 		_:
-			rig.locomotion(delta, hs, CHASE_SPEED)
+			rig.locomotion(delta, hs, chase_speed)
 
 
 func _patrol(delta: float) -> void:
@@ -417,12 +502,12 @@ func _patrol(delta: float) -> void:
 		timer -= delta
 		if timer <= 0.0:
 			waiting = false
-			pi = (pi + 1) % PATROL_PTS.size()
+			pi = (pi + 1) % patrol_points.size()
 		return
-	var d := _move_toward(PATROL_PTS[pi], WALK_SPEED, delta)
+	var d := _move_toward(patrol_points[pi], walk_speed, delta)
 	if d < 0.15:
 		waiting = true
-		timer = 1.0
+		timer = patrol_wait
 
 
 func _investigate(delta: float) -> void:
@@ -432,7 +517,12 @@ func _investigate(delta: float) -> void:
 		if timer <= 0.0:
 			state = S.PATROL
 			waiting = false
-			pi = 0 if global_position.distance_to(PATROL_PTS[0]) < global_position.distance_to(PATROL_PTS[1]) else 1
+			var nearest := INF
+			for i in patrol_points.size():
+				var distance := global_position.distance_to(patrol_points[i])
+				if distance <= nearest:
+					nearest = distance
+					pi = i
 		return
 	_step_target(target, delta)
 	var d := _move_toward(next_pt, INVESTIGATE_SPEED, delta)
@@ -466,9 +556,13 @@ func _chase(sees: bool, pp: Vector3, delta: float) -> void:
 			detect = 0.0
 			return
 	var dist := _flat_to(pp).length()
+	if lookout and attack_cd <= 0.0 and dist > 0.05 and dist <= 2.8 and pp.x < Level.DIVIDER_X and level.clear_line(global_position, pp):
+		level.bark("ataque")
+		_start_charge_warning(pp)
+		return
 	var next_is_slam := attack_seq % 3 == 2
 	var reach := 2.4 if next_is_slam else 1.7
-	if dist <= reach and attack_cd <= 0.0:
+	if not lookout and dist <= reach and attack_cd <= 0.0:
 		level.bark("ataque")
 		state = S.WINDUP
 		slam = next_is_slam
@@ -477,13 +571,13 @@ func _chase(sees: bool, pp: Vector3, delta: float) -> void:
 		return
 	if dist > 1.4:
 		_step_target(last_seen, delta)
-		_move_toward(next_pt, CHASE_SPEED, delta)
+		_move_toward(next_pt, chase_speed, delta)
 	else:
 		_face(pp, delta)
 
 
 func _update_cone() -> void:
-	if state == S.DISARMED or state == S.STANDDOWN or state == S.STUNNED or state == S.BLOCK or state == S.WINDUP:
+	if state == S.DISARMED or state == S.STANDDOWN or state == S.STUNNED or state == S.BLOCK or state == S.WINDUP or state == S.CHARGING:
 		cone.visible = false
 		return
 	cone.visible = true
@@ -492,16 +586,18 @@ func _update_cone() -> void:
 		cone_mat.albedo_color = Color(1.0, 0.15, 0.15, 0.22)
 	else:
 		cone_mat.albedo_color = Color(1.0, 0.9, 0.3, 0.22).lerp(Color(1.0, 0.25, 0.2, 0.42), ratio)
+	if Gfx.headless:
+		return
 	var origin := global_position + Vector3(0.0, 0.6, 0.0)
 	var space := get_world_3d().direct_space_state
 	var pts: Array[Vector3] = []
 	for i in CONE_SEGS + 1:
-		var a := -SIGHT_HALF + (2.0 * SIGHT_HALF) * float(i) / CONE_SEGS
+		var a := -sight_half + (2.0 * sight_half) * float(i) / CONE_SEGS
 		var local := Vector3(sin(a), 0.0, -cos(a))
 		var world := local.rotated(Vector3.UP, yaw)
-		var q := PhysicsRayQueryParameters3D.create(origin, origin + world * SIGHT_RANGE, 1)
+		var q := PhysicsRayQueryParameters3D.create(origin, origin + world * sight_range, 1)
 		var hit := space.intersect_ray(q)
-		var reach := SIGHT_RANGE
+		var reach := sight_range
 		if not hit.is_empty():
 			var hp: Vector3 = hit["position"]
 			reach = origin.distance_to(hp)
@@ -516,5 +612,4 @@ func _update_cone() -> void:
 	arrays[Mesh.ARRAY_VERTEX] = verts
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	if not Gfx.headless:
-		cone.mesh = m
+	cone.mesh = m

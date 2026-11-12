@@ -41,6 +41,8 @@ var faded: Array[MeshInstance3D] = []
 var dodge_t := 0.0
 var dodge_cd := 0.0
 var invuln := 0.0
+var knockdown_t := 0.0
+var knockdown_duration := 0.0
 var dodge_dir := Vector3.ZERO
 var shake := 0.0
 var locked := false
@@ -152,15 +154,16 @@ func rotate_cam(d: Vector2) -> void:
 ## Cámara de tercera persona pegada a la espalda: se recoloca sola detrás de Sira al moverse
 ## y se encara al enemigo cuando hay pelea. El arrastre del dedo la mueve a mano un momento.
 func _combat_target() -> Guard:
-	var g := level.guard
-	if g == null:
-		return null
-	var busy := g.state == Guard.S.CHASE or g.state == Guard.S.WINDUP or g.state == Guard.S.STUNNED or g.state == Guard.S.BLOCK
-	if not busy:
-		return null
-	var to := g.global_position - global_position
-	to.y = 0.0
-	return g if to.length() < 7.0 else null
+	var nearest: Guard
+	var distance := 7.0
+	for g in level.guards:
+		if g.state not in [Guard.S.CHASE, Guard.S.WINDUP, Guard.S.CHARGING, Guard.S.STUNNED, Guard.S.BLOCK]:
+			continue
+		var d := level.flat_dist(global_position, g.global_position)
+		if d < distance:
+			distance = d
+			nearest = g
+	return nearest
 
 
 func _follow_camera(delta: float, dir: Vector3) -> void:
@@ -187,6 +190,7 @@ func lock_for_respawn() -> void:
 	swing_t = 0.0
 	hit_pending = -1.0
 	_clear_combo()
+	_clear_knockdown()
 	velocity.x = 0.0
 	velocity.z = 0.0
 	touch_move = Vector2.ZERO
@@ -216,6 +220,7 @@ func respawn_at(pos: Vector3) -> void:
 	swing_t = 0.0
 	hit_pending = -1.0
 	_clear_combo()
+	_clear_knockdown()
 	if death_animating:
 		death_animating = false
 		roll_node.rotation = Vector3.ZERO
@@ -235,7 +240,7 @@ func _move_dir() -> Vector3:
 
 
 func do_hook() -> void:
-	if locked or dodge_t > 0.0:
+	if locked or knockdown_t > 0.0 or dodge_t > 0.0:
 		return
 	if combo_left > 0.0:
 		if hook_cd > 0.0:
@@ -255,12 +260,12 @@ func _start_hook(step: int) -> void:
 	hit_pending = HIT_DELAY
 	level.spend_hook()
 	level.play("swish")
-	var g := level.guard
-	var to := g.global_position - global_position
-	to.y = 0.0
-	var d := to.length()
-	if g.can_be_hit() and d < 3.2 and d > 0.05:
-		facing = atan2(-to.x, -to.z)
+	var g := _hook_target(3.2, false)
+	if g != null:
+		var to := g.global_position - global_position
+		var distance := Vector2(to.x, to.z).length()
+		if distance > 0.05 and distance < 3.2:
+			facing = atan2(-to.x, -to.z)
 
 
 func _clear_combo() -> void:
@@ -271,18 +276,47 @@ func _clear_combo() -> void:
 
 ## El daño llega en el frame de contacto del golpe, no al pulsar.
 func _resolve_hit() -> bool:
-	var g := level.guard
-	if not g.can_be_hit():
-		return true
-	var to := g.global_position - global_position
-	to.y = 0.0
-	if to.length() <= HOOK_RANGE and level.clear_line(global_position, g.global_position):
+	var g := _hook_target(HOOK_RANGE, true)
+	if g != null:
 		return g.take_hit(combo_step == HOOK_CLIPS.size())
 	return true
 
 
+func _hook_target(reach: float, require_clear_line: bool) -> Guard:
+	var target: Guard
+	var distance := reach
+	for g in level.guards:
+		if not g.can_be_hit():
+			continue
+		var d := level.flat_dist(global_position, g.global_position)
+		if d > distance or (require_clear_line and not level.clear_line(global_position, g.global_position)):
+			continue
+		target = g
+		distance = d
+	return target
+
+
+func knock_down(duration: float) -> void:
+	knockdown_duration = duration
+	knockdown_t = duration
+	velocity.x = 0.0
+	velocity.z = 0.0
+	swing_t = 0.0
+	hit_pending = -1.0
+	_clear_combo()
+
+
+func _clear_knockdown() -> void:
+	if knockdown_duration > 0.0:
+		knockdown_t = 0.0
+		knockdown_duration = 0.0
+		roll_node.rotation.z = 0.0
+		roll_node.position.y = 0.9
+		rig.reset_pose()
+
+
 func do_dodge() -> void:
-	if locked or dodge_cd > 0.0 or dodge_t > 0.0:
+	if locked or knockdown_t > 0.0 or dodge_cd > 0.0 or dodge_t > 0.0:
 		return
 	var dir := _move_dir()
 	if dir.length() < 0.2:
@@ -319,8 +353,9 @@ func _physics_process(delta: float) -> void:
 			_start_hook(combo_step + 1)
 	dodge_cd = maxf(0.0, dodge_cd - delta)
 	invuln = maxf(0.0, invuln - delta)
+	knockdown_t = maxf(0.0, knockdown_t - delta)
 	cam_manual_t = maxf(0.0, cam_manual_t - delta)
-	var dir := Vector3.ZERO if locked else _move_dir()
+	var dir := Vector3.ZERO if locked or knockdown_t > 0.0 else _move_dir()
 	if dodge_t > 0.0:
 		dodge_t = maxf(0.0, dodge_t - delta)
 		velocity.x = dodge_dir.x * DODGE_SPEED
@@ -344,13 +379,20 @@ func _physics_process(delta: float) -> void:
 func _animate(delta: float) -> void:
 	if death_animating:
 		return
+	if knockdown_t > 0.0:
+		var fallen := smoothstep(0.0, 0.16, knockdown_duration - knockdown_t) * smoothstep(0.0, 0.18, knockdown_t)
+		roll_node.rotation.x = 0.0
+		roll_node.rotation.z = fallen * PI * 0.5
+		roll_node.position.y = lerpf(0.9, 0.32, fallen)
+		return
+	_clear_knockdown()
 	var hs := Vector2(velocity.x, velocity.z).length()
 	if rig.is_model:
 		_animate_model(delta, hs)
 		return
 	rig.locomotion(delta, hs, SPEED)
 	if rig.step_flag and is_on_floor() and dodge_t <= 0.0:
-		level.play("step", -16.0)
+		level.play_footstep(global_position)
 	if swing_t > 0.0:
 		rig.pose_attack(1.0 - swing_t / SWING_TIME)
 	if dodge_t > 0.0:
@@ -375,7 +417,7 @@ func _animate_model(delta: float, hs: float) -> void:
 	else:
 		rig.locomotion(delta, hs, SPEED)
 		if rig.step_flag and is_on_floor():
-			level.play("step", -16.0)
+			level.play_footstep(global_position)
 
 
 static var _fade_mat: StandardMaterial3D

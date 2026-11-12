@@ -24,13 +24,25 @@ const NAV_POINTS: Array[Vector3] = [
 	Vector3(7.0, 0.1, 6.5), Vector3(11.0, 0.1, 6.5),
 ]
 const RELEASE_URL := "https://github.com/iskyhigh00/GpA/releases/tag/latest"
+const WEST_NAV_POINTS: Array[Vector3] = [
+	Vector3(-2.5, 0.1, 4.2), Vector3(0.0, 0.1, 4.2), Vector3(4.4, 0.1, 4.2),
+	Vector3(5.9, 0.1, 5.6), Vector3(5.9, 0.1, -4.7),
+]
+const METAL_FLOOR := Rect2(4.0, -2.0, 2.0, 4.0)
+const METAL_NOISE_SPEED := 2.5
+const METAL_NOISE_INTERVAL := 2.0
 const WALL := Color(0.34, 0.39, 0.44)
 
+var expansion := true
 var phase: Phase = Phase.TUTORIAL
 var tutorial_step := 1
 var player: Player
 var guard: Guard
+var guards: Array[Guard] = []
+var lookout: Guard
 var lamp: RailLamp
+var dock_lamp: RailLamp
+var metal_noise_cooldown := 0.0
 var tray: Tray
 var cart: IceCart
 var hud: Hud
@@ -139,6 +151,8 @@ func _ready() -> void:
 	Quality.apply(get_viewport(), quality_env)
 	Gfx.capture_static_meshes = Gfx.headless
 	_build_world()
+	if expansion:
+		_build_west()
 	Gfx.capture_static_meshes = false
 	var moving: Array[Node3D] = [door_body, grate_plate]
 	moving.append_array(kit_cross)
@@ -250,8 +264,8 @@ func _barrel(x: float, z: float) -> void:
 	add_child(b)
 
 
-func _crate(pos: Vector3, size: Vector3) -> void:
-	var b := Gfx.solid_m(self, pos, size, Gfx.mat_mossy(), 2)
+func _crate(pos: Vector3, size: Vector3, layer: int = 2) -> void:
+	var b := Gfx.solid_m(self, pos, size, Gfx.mat_mossy(), layer)
 	for sy in [-1.0, 1.0]:
 		var slat := Gfx.box_m(Vector3(size.x + 0.04, 0.07, size.z + 0.04), Gfx.mat_gloss(Color(0.1, 0.07, 0.05), 0.7))
 		slat.position = Vector3(0.0, sy * (size.y * 0.5 - 0.05), 0.0)
@@ -735,7 +749,7 @@ func _build_world() -> void:
 	_hang_lamp(-10.0, 0.0)
 	# Lonja: puestos, cajas, barriles.
 	_stall(Vector3(3.0, 0.5, 3.0), Vector3(1.6, 1.0, 1.2))
-	_stall(Vector3(1.0, 0.5, -2.5), Vector3(1.4, 1.0, 1.0))
+	_stall(Vector3(4.6, 0.5, -3.9) if expansion else Vector3(1.0, 0.5, -2.5), Vector3(1.4, 1.0, 1.0))
 	_crate(Vector3(20.5, 0.5, -6.0), Vector3(1.4, 1.0, 1.4))
 	_crate(Vector3(21.0, 0.5, -1.5), Vector3(1.2, 1.0, 1.2))
 	_crate(Vector3(20.6, 1.4, -6.0), Vector3(0.9, 0.8, 0.9))
@@ -794,6 +808,28 @@ func _build_world() -> void:
 	_build_particles()
 
 
+func _build_west() -> void:
+	# La hilera de carga protege la salida del consultorio. Se rodea por el sur.
+	for z: float in [-8.1, -4.9, -1.7, 1.5]:
+		_crate(Vector3(-1.35, 1.05, z), Vector3(1.05, 2.1, 3.2), 1)
+	# Entre los cajones y el divisor queda un corredor protegido, abierto por ambos extremos.
+	for z: float in [-2.7, -1.35, 1.2, 2.55]:
+		_crate(Vector3(7.0, 0.95, z), Vector3(1.15, 1.9, 1.32), 1)
+	var steel := Gfx.mat(Color(0.13, 0.16, 0.18), 0.75)
+	steel.metallic = 0.65
+	for x in 2:
+		for z in 4:
+			var plate := Gfx.box_m(Vector3(0.97, 0.018, 0.97), steel)
+			plate.position = Vector3(METAL_FLOOR.position.x + x + 0.5, 0.012, METAL_FLOOR.position.y + z + 0.5)
+			add_child(plate)
+	var light := Gfx.glow_mat(Color(0.47, 0.62, 0.74, 0.12))
+	for center: Vector3 in [Vector3(2.55, 0.025, -6.8), Vector3(5.75, 0.025, 4.4)]:
+		var footprint := Gfx.box_m(Vector3(1.7, 0.01, 2.1), light)
+		Gfx.no_shadow(footprint)
+		footprint.position = center
+		add_child(footprint)
+
+
 func _build_entities() -> void:
 	player = Player.new()
 	player.level = self
@@ -814,6 +850,29 @@ func _build_entities() -> void:
 	guard = Guard.new()
 	guard.level = self
 	add_child(guard)
+	guards.append(guard)
+	if not expansion:
+		return
+	lookout = Guard.new()
+	lookout.name = "Vigia"
+	lookout.level = self
+	lookout.lookout = true
+	add_child(lookout)
+	guards.append(lookout)
+	dock_lamp = RailLamp.new()
+	dock_lamp.name = "LamparaDesembarco"
+	dock_lamp.level = self
+	dock_lamp.axis = Vector3.BACK
+	dock_lamp.rail_origin = Vector3(1.0, 0.0, 0.0)
+	dock_lamp.start = -8.0
+	dock_lamp.end = 8.0
+	dock_lamp.radius = 2.0
+	dock_lamp.speed = 4.0
+	dock_lamp.wait_time = 1.0
+	dock_lamp.detect_time = 0.24
+	add_child(dock_lamp)
+	dock_lamp.signal_emitted.connect(_on_dock_lamp_signal)
+	dock_lamp.spotted.connect(_on_dock_lamp_spotted)
 
 
 func _build_hud() -> void:
@@ -867,6 +926,8 @@ func _start_audio() -> void:
 			steps.append(load(path))
 	if not steps.is_empty():
 		variants["step"] = steps
+		if expansion:
+			variants["paso_metal_mojado"] = steps
 	if Gfx.headless:
 		return
 	for a: Array in AMBIENCE:
@@ -918,6 +979,11 @@ func flat_dist(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
 
+func play_footstep(pos: Vector3) -> void:
+	if lookout == null or not METAL_FLOOR.has_point(Vector2(pos.x, pos.z)):
+		play("step", -16.0)
+
+
 func clear_line(a: Vector3, b: Vector3) -> bool:
 	var q := PhysicsRayQueryParameters3D.create(a + Vector3(0.0, 0.6, 0.0), b + Vector3(0.0, 0.6, 0.0), 1)
 	return get_world_3d().direct_space_state.intersect_ray(q).is_empty()
@@ -929,6 +995,8 @@ func next_step(from: Vector3, to: Vector3) -> Vector3:
 		return to
 	var pts: Array[Vector3] = [from, to]
 	pts.append_array(NAV_POINTS)
+	if lookout != null:
+		pts.append_array(WEST_NAV_POINTS)
 	var n := pts.size()
 	var dist: Array[float] = []
 	var prev: Array[int] = []
@@ -979,12 +1047,15 @@ func spend(amount: float) -> void:
 		die()
 
 
-func hurt_player(dmg: float) -> void:
+func hurt_player(dmg: float, knockdown: float = 0.0) -> void:
 	if player.hurt_cd > 0.0 or player.invuln > 0.0 or dying or done:
 		return
 	player.hurt_cd = 0.8
 	player.add_shake(0.35)
-	player.flinch()
+	if knockdown > 0.0:
+		player.knock_down(knockdown)
+	else:
+		player.flinch()
 	hud.flash = 1.0
 	play("hurt")
 	spend(dmg)
@@ -1105,7 +1176,8 @@ func try_force() -> void:
 		if reserve > FORCE_COST:
 			reserve -= FORCE_COST
 			cart.start()
-			guard.stand_down()
+			for patrol in guards:
+				patrol.stand_down()
 			play("ice", -2.0)
 			hud.say("Fuerza prestada (−35): el carro se desprende.")
 			_set_objective()
@@ -1161,8 +1233,12 @@ func _respawn() -> void:
 	if grate_steam:
 		grate_steam.emitting = false
 	tray.reset()
-	guard.reset()
+	for patrol in guards:
+		patrol.reset()
 	lamp.reset()
+	if dock_lamp != null:
+		dock_lamp.reset()
+		metal_noise_cooldown = 0.0
 	cart.reset()
 	cart.set_physics_process(true)
 	player.respawn_at(checkpoint)
@@ -1252,7 +1328,8 @@ func _open_door() -> void:
 func _on_tray_arrived(pos: Vector3) -> void:
 	play("clang")
 	lamp.attract(pos)
-	guard.investigate(pos)
+	for patrol in guards:
+		patrol.investigate(pos)
 	hud.say("¡Clang! La lámpara y el guardia miran hacia la bandeja.", 4.0)
 	think("ruido", 4.6)
 
@@ -1269,6 +1346,32 @@ func _on_lamp_signal() -> void:
 func _on_lamp_spotted() -> void:
 	hud.say("¡La lámpara te encontró!", 2.5)
 	guard.alert(player.global_position)
+
+
+func _on_dock_lamp_signal() -> void:
+	if phase == Phase.PLAY and not dying and player.global_position.x < DIVIDER_X:
+		play("beep")
+		hud.show_banner("LÁMPARA DE DESEMBARCO", dock_lamp.signal_time)
+
+
+func _on_dock_lamp_spotted() -> void:
+	lookout.investigate(player.global_position)
+	hud.say("El vigía revisa la luz de desembarco.", 2.0)
+
+
+func _update_metal_floor(delta: float) -> void:
+	metal_noise_cooldown = maxf(0.0, metal_noise_cooldown - delta)
+	if metal_noise_cooldown > 0.0 or phase != Phase.PLAY or dying or not player.is_on_floor():
+		return
+	var p := player.global_position
+	if not METAL_FLOOR.has_point(Vector2(p.x, p.z)):
+		return
+	var motion := player.get_real_velocity()
+	if Vector2(motion.x, motion.z).length() <= METAL_NOISE_SPEED:
+		return
+	metal_noise_cooldown = METAL_NOISE_INTERVAL
+	play("paso_metal_mojado", -8.0)
+	lookout.investigate(p)
 
 
 func _on_cart_rolling() -> void:
@@ -1363,6 +1466,8 @@ func _physics_process(delta: float) -> void:
 	if tutorial_step == 1:
 		hud.obj_ratio = cam_progress
 	_check_progress()
+	if lookout != null:
+		_update_metal_floor(delta)
 	_tick_thoughts(delta)
 	_update_prompts()
 
@@ -1390,6 +1495,10 @@ func _update_prompts() -> void:
 	if not done and not dying and flat_dist(p, DESK_POS) < 2.4:
 		lines.append("ACCIÓN: leer los folios de la mesa")
 	if phase == Phase.PLAY and not done and not dying:
+		if dock_lamp != null and p.x < 0.5 and p.z > 3.4 and p.z < 5.2:
+			lines.append("Desembarco: espera la campana y cruza fuera del haz")
+		elif lookout != null and METAL_FLOOR.grow(0.7).has_point(Vector2(p.x, p.z)):
+			lines.append("Camina despacio sobre las placas")
 		if tray.state == Tray.S.READY and flat_dist(p, tray.start_pos()) < 2.4:
 			lines.append("ACCIÓN: empujar la bandeja")
 		if kit_available and flat_dist(p, KIT_POS) < 2.4:

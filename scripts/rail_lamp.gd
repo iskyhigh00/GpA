@@ -21,9 +21,21 @@ const SIGNAL_TIME := 0.9
 const ATTRACT_TIME := 8.0
 
 var level: Level
+var axis := Vector3.RIGHT
+var rail_origin := Vector3(0.0, 0.0, RAIL_Z)
+var start := A_X
+var end := B_X
+var speed := SPEED
+var radius := RADIUS
+var wait_time := DWELL_TIME
+var signal_time := SIGNAL_TIME
+var detect_time := DETECT_TIME
 var state: S = S.DWELL
 var t := DWELL_TIME
-var head_x := A_X
+var head_offset := A_X
+var head_x: float:
+	get:
+		return (rail_origin + axis * head_offset).x
 var going_to_b := true
 var aim := Vector3(A_X, 0.0, RAIL_Z)
 var attract_pos := Vector3.ZERO
@@ -40,13 +52,15 @@ var pool: OmniLight3D
 
 func _ready() -> void:
 	top_level = true
-	var rail := Gfx.box_mesh(Vector3(B_X - A_X + 2.0, 0.12, 0.12), Color(0.3, 0.3, 0.33))
-	rail.position = Vector3((A_X + B_X) * 0.5, HEIGHT + 0.25, RAIL_Z)
+	var rail := Gfx.box_mesh(Vector3.ONE, Color(0.3, 0.3, 0.33))
 	add_child(rail)
+	var elevation := Vector3.UP * (HEIGHT + 0.25)
+	Gfx.place_beam(rail, rail_origin + axis * (start - 1.0) + elevation,
+		rail_origin + axis * (end + 1.0) + elevation, 0.12)
 	head = Gfx.box_mesh(Vector3(0.5, 0.35, 0.5), Color(1.0, 0.85, 0.4), 1.2)
 	head_mat = head.material_override as StandardMaterial3D
 	add_child(head)
-	disc = Gfx.disc(RADIUS, Color(1.0, 0.9, 0.5, 0.28))
+	disc = Gfx.disc(radius, Color(1.0, 0.9, 0.5, 0.28))
 	disc_mat = disc.material_override as StandardMaterial3D
 	add_child(disc)
 	ray = Gfx.beam(Color(1.0, 0.95, 0.6, 0.12))
@@ -61,10 +75,10 @@ func _ready() -> void:
 
 func reset() -> void:
 	state = S.DWELL
-	t = DWELL_TIME
-	head_x = A_X
+	t = wait_time
+	head_offset = start
 	going_to_b = true
-	aim = Vector3(A_X, 0.0, RAIL_Z)
+	aim = rail_origin + axis * head_offset
 	detect = 0.0
 	spot_cd = 0.0
 	_update_visuals()
@@ -84,7 +98,7 @@ func _physics_process(delta: float) -> void:
 			t -= delta
 			if t <= 0.0:
 				state = S.SIGNAL
-				t = SIGNAL_TIME
+				t = signal_time
 				signals_emitted += 1
 				signal_emitted.emit()
 		S.SIGNAL:
@@ -92,19 +106,20 @@ func _physics_process(delta: float) -> void:
 			if t <= 0.0:
 				state = S.MOVING
 		S.MOVING:
-			var dest := B_X if going_to_b else A_X
-			head_x = move_toward(head_x, dest, SPEED * delta)
-			if is_equal_approx(head_x, dest):
+			var dest := end if going_to_b else start
+			head_offset = move_toward(head_offset, dest, speed * delta)
+			if is_equal_approx(head_offset, dest):
 				going_to_b = not going_to_b
 				state = S.DWELL
-				t = DWELL_TIME
+				t = wait_time
 		S.ATTRACTED:
 			t -= delta
-			head_x = move_toward(head_x, clampf(attract_pos.x, A_X, B_X), SPEED * delta)
+			var offset := (attract_pos - rail_origin).dot(axis)
+			head_offset = move_toward(head_offset, clampf(offset, start, end), speed * delta)
 			if t <= 0.0:
 				state = S.DWELL
-				t = DWELL_TIME
-	var desired := attract_pos if state == S.ATTRACTED else Vector3(head_x, 0.0, RAIL_Z)
+				t = wait_time
+	var desired := attract_pos if state == S.ATTRACTED else rail_origin + axis * head_offset
 	aim = aim.move_toward(desired, 12.0 * delta)
 	_detect_player(delta)
 	_update_visuals()
@@ -115,9 +130,9 @@ func _detect_player(delta: float) -> void:
 		return
 	var p := level.player.global_position
 	var d := Vector2(p.x - aim.x, p.z - aim.z).length()
-	if d <= RADIUS and level.phase == Level.Phase.PLAY and not level.player.locked:
+	if d <= radius and level.phase == Level.Phase.PLAY and not level.player.locked:
 		detect += delta
-		if detect >= DETECT_TIME and spot_cd <= 0.0:
+		if detect >= detect_time and spot_cd <= 0.0:
 			detect = 0.0
 			spot_cd = 2.0
 			spotted.emit()
@@ -126,7 +141,7 @@ func _detect_player(delta: float) -> void:
 
 
 func _update_visuals() -> void:
-	var from := Vector3(head_x, HEIGHT, RAIL_Z)
+	var from := rail_origin + axis * head_offset + Vector3.UP * HEIGHT
 	head.position = from
 	var blink := state == S.SIGNAL and int(t * 10.0) % 2 == 0
 	head_mat.emission_energy_multiplier = 4.0 if blink else 1.0
