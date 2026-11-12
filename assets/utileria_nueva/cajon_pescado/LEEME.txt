@@ -1,0 +1,11 @@
+CAJON PESCADO · EL TURNO DE LA SAL
+Cajón abierto con tablas separadas, clavos, dos patines y aberturas de agarre.
+
+Triángulos: 1800.
+Medidas (ancho X × alto Y × fondo Z): 0.902 × 0.355 × 0.589 m.
+Una malla estática, un material y tres mapas integrados de 1024 × 1024.
+Mapas: color, normal tangente y ARM (R oclusión, G rugosidad, B metalicidad).
+Eje +Y arriba. Origen en el centro de la base.
+Herramientas: Python 3, NumPy y Pillow. Geometría y atlas procedurales originales.
+Validación local de estructura GLB, índices, medidas, material, tangentes y mapas.
+Pendiente: revisión en Blender 4.3 e importación en Godot 4.3 GL Compatibility.

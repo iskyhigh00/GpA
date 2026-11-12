@@ -1,0 +1,11 @@
+BARRIL MADERA · EL TURNO DE LA SAL
+Barril de catorce duelas, tapa de tablas, tapón y cuatro aros de hierro remachados.
+
+Triángulos: 1036.
+Medidas (ancho X × alto Y × fondo Z): 0.686 × 0.762 × 0.688 m.
+Una malla estática, un material y tres mapas integrados de 1024 × 1024.
+Mapas: color, normal tangente y ARM (R oclusión, G rugosidad, B metalicidad).
+Eje +Y arriba. Origen en el centro de la base.
+Herramientas: Python 3, NumPy y Pillow. Geometría y atlas procedurales originales.
+Validación local de estructura GLB, índices, medidas, material, tangentes y mapas.
+Pendiente: revisión en Blender 4.3 e importación en Godot 4.3 GL Compatibility.

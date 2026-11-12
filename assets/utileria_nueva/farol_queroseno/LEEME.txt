@@ -1,0 +1,11 @@
+FAROL QUEROSENO · EL TURNO DE LA SAL
+Farol con depósito, vidrio ámbar, jaula de hierro y cuatro eslabones.
+
+Triángulos: 1528.
+Medidas (ancho X × alto Y × fondo Z): 0.284 × 0.556 × 0.260 m.
+Una malla estática, un material y tres mapas integrados de 1024 × 1024.
+Mapas: color, normal tangente y ARM (R oclusión, G rugosidad, B metalicidad).
+Eje +Y arriba. Origen en el centro de la base.
+Herramientas: Python 3, NumPy y Pillow. Geometría y atlas procedurales originales.
+Validación local de estructura GLB, índices, medidas, material, tangentes y mapas.
+Pendiente: revisión en Blender 4.3 e importación en Godot 4.3 GL Compatibility.
