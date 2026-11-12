@@ -20,9 +20,12 @@ signal cam_dragged(delta: Vector2)
 
 const STICK_RADIUS := 90.0
 const DEADZONE := 0.15
-const BAR_POS := Vector2(24.0, 44.0)
+const SAFE_MARGIN := 40.0
+const BAR_POS := Vector2(46.0, 104.0)
 const BAR_SIZE := Vector2(380.0, 26.0)
 const CONTROL_LABEL_SIZE := 20
+const TEXT_OUTLINE := 6
+const RESTART_HOLD := 0.6
 
 var level: Level
 var canvas: Control
@@ -33,6 +36,8 @@ var stick_origin := Vector2.ZERO
 var stick_pos := Vector2.ZERO
 var move_vec := Vector2.ZERO
 var held: Dictionary = {}
+var _restart_index := -1
+var _restart_time := 0.0
 var message := ""
 var message_t := 0.0
 var last_message := ""
@@ -90,16 +95,21 @@ func view_size() -> Vector2:
 	return get_viewport().get_visible_rect().size
 
 
+func safe_area() -> Rect2:
+	return Rect2(Vector2.ZERO, view_size()).grow(-SAFE_MARGIN)
+
+
 func buttons() -> Dictionary:
 	var vs := view_size()
+	var compact_edge := SAFE_MARGIN + 28.0
 	return {
-		"hook": {"c": Vector2(vs.x - 125.0, vs.y - 125.0), "r": 66.0, "t": "GANCHO"},
-		"dodge": {"c": Vector2(vs.x - 270.0, vs.y - 70.0), "r": 46.0, "t": "ESQUIVA"},
+		"hook": {"c": Vector2(vs.x - 125.0, vs.y - 125.0), "r": 80.0, "t": "GANCHO"},
+		"dodge": {"c": Vector2(vs.x - 270.0, vs.y - 70.0), "r": 56.0, "t": "ESQUIVA"},
 		"force": {"c": Vector2(vs.x - 285.0, vs.y - 185.0), "r": 46.0, "t": "FUERZA"},
 		"action": {"c": Vector2(vs.x - 190.0, vs.y - 285.0), "r": 46.0, "t": "ACCIÓN"},
 		"ampoule": {"c": Vector2(vs.x - 75.0, vs.y - 285.0), "r": 46.0, "t": "AMPOLLA"},
-		"restart": {"c": Vector2(vs.x - 44.0, 44.0), "r": 26.0, "t": "↻"},
-		"settings": {"c": Vector2(vs.x - 104.0, 44.0), "r": 26.0, "t": "⚙"},
+		"restart": {"c": Vector2(vs.x - compact_edge, compact_edge), "r": 26.0, "t": "↻"},
+		"settings": {"c": Vector2(vs.x - compact_edge - 60.0, compact_edge), "r": 26.0, "t": "⚙"},
 	}
 
 
@@ -216,6 +226,8 @@ func reset_touches() -> void:
 	stick_index = -1
 	move_vec = Vector2.ZERO
 	held.clear()
+	_restart_index = -1
+	_restart_time = 0.0
 
 
 func prepare_respawn(keep_restart_touch: bool) -> void:
@@ -254,12 +266,14 @@ func show_banner(text: String, secs: float = 1.2) -> void:
 
 
 func show_end(lines: Array[String]) -> void:
+	reset_touches()
 	end_lines = lines
 	end_visible = true
 
 
 func _process(delta: float) -> void:
 	time += delta
+	_tick_restart_hold(delta)
 	if dialog_visible:
 		dialog_t += delta
 		if dialog_t >= DIALOG_AUTO:
@@ -271,6 +285,20 @@ func _process(delta: float) -> void:
 	canvas.queue_redraw()
 
 
+func restart_progress() -> float:
+	return _restart_time / RESTART_HOLD
+
+
+func _tick_restart_hold(delta: float) -> void:
+	if _restart_index == -1:
+		return
+	_restart_time = minf(RESTART_HOLD, _restart_time + delta)
+	if is_equal_approx(_restart_time, RESTART_HOLD):
+		_restart_index = -1
+		_restart_time = 0.0
+		restart_pressed.emit()
+
+
 # ---------------------------------------------------------------- toques
 
 func _input(event: InputEvent) -> void:
@@ -279,7 +307,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventScreenTouch:
 		var t := event as InputEventScreenTouch
-		if t.pressed:
+		if t.pressed and not t.canceled:
 			_press(t.index, t.position)
 		else:
 			_release(t.index)
@@ -294,7 +322,8 @@ func _hit_button(pos: Vector2) -> String:
 		var b: Dictionary = all[key]
 		var c: Vector2 = b["c"]
 		var r: float = b["r"]
-		if pos.distance_to(c) <= r + 12.0:
+		var padding := 3.0 if r < 30.0 else 6.0
+		if pos.distance_to(c) <= r + padding:
 			return key
 	return ""
 
@@ -338,6 +367,8 @@ func _press(index: int, pos: Vector2) -> void:
 		set_settings(true)
 		return
 	if bname != "":
+		if bname == "restart" and _restart_index != -1:
+			return
 		touches[index] = {"role": "btn", "name": bname}
 		held[bname] = int(held.get(bname, 0)) + 1
 		match bname:
@@ -352,7 +383,7 @@ func _press(index: int, pos: Vector2) -> void:
 			"ampoule":
 				ampoule_pressed.emit()
 			"restart":
-				restart_pressed.emit()
+				_restart_index = index
 		return
 	if pos.x < view_size().x * 0.5 and stick_index == -1:
 		stick_index = index
@@ -376,6 +407,8 @@ func _drag(index: int, pos: Vector2, rel: Vector2) -> void:
 		move_vec = Vector2.ZERO if v.length() < DEADZONE else v
 	elif role == "cam":
 		cam_dragged.emit(rel)
+	elif index == _restart_index and _hit_button(pos) != "restart":
+		_release(index)
 
 
 func _release(index: int) -> void:
@@ -389,14 +422,23 @@ func _release(index: int) -> void:
 	elif role == "btn":
 		var bname: String = info["name"]
 		held[bname] = maxi(0, int(held.get(bname, 1)) - 1)
+	if index == _restart_index:
+		_restart_index = -1
+		_restart_time = 0.0
 	touches.erase(index)
 
 
 # ---------------------------------------------------------------- dibujo
 
 func _text(pos: Vector2, s: String, size: int, col: Color, align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT, width: float = -1.0) -> void:
-	canvas.draw_string_outline(font, pos, s, align, width, size, 6, Color(0, 0, 0, 0.85))
-	canvas.draw_string(font, pos, s, align, width, size, col)
+	var bounds := safe_area().grow(-TEXT_OUTLINE)
+	var left := maxf(pos.x, bounds.position.x)
+	var right := minf(pos.x + width, bounds.end.x) if width >= 0.0 else bounds.end.x
+	var baseline := clampf(pos.y, bounds.position.y + font.get_ascent(size), bounds.end.y - font.get_descent(size))
+	var start := Vector2(left, baseline)
+	var span := maxf(1.0, right - left)
+	canvas.draw_string_outline(font, start, s, align, span, size, TEXT_OUTLINE, Color(0, 0, 0, 0.85))
+	canvas.draw_string(font, start, s, align, span, size, col)
 
 
 func _draw_ui() -> void:
@@ -446,10 +488,10 @@ func _draw_bar() -> void:
 
 func _draw_texts(vs: Vector2) -> void:
 	if objective != "":
-		_text(Vector2(0.0, 36.0), objective, 24, Color(0.92, 0.95, 1.0), HORIZONTAL_ALIGNMENT_CENTER, vs.x)
+		_text(Vector2(0.0, 70.0), objective, 24, Color(0.92, 0.95, 1.0), HORIZONTAL_ALIGNMENT_CENTER, vs.x)
 		if obj_ratio >= 0.0:
 			var bw := 320.0
-			var bp := Vector2(vs.x * 0.5 - bw * 0.5, 52.0)
+			var bp := Vector2(vs.x * 0.5 - bw * 0.5, 81.0)
 			canvas.draw_rect(Rect2(bp, Vector2(bw, 12.0)), Color(0, 0, 0, 0.6))
 			canvas.draw_rect(Rect2(bp, Vector2(bw * clampf(obj_ratio, 0.0, 1.0), 12.0)), Color(0.4, 0.8, 0.9))
 	if message_t > 0.0:
@@ -486,6 +528,9 @@ func _draw_controls(_vs: Vector2) -> void:
 			base = Color(0.3, 0.3, 0.3)
 		canvas.draw_circle(c, r, Color(base, 0.75 if down else 0.4))
 		canvas.draw_arc(c, r, 0.0, TAU, 40, Color(1, 1, 1, 0.8 if down else 0.5), 3.0)
+		if key == "restart" and _restart_index != -1 and _restart_time > 0.0:
+			canvas.draw_arc(c, r - 4.0, -PI * 0.5, -PI * 0.5 + TAU * restart_progress(),
+				32, Color(0.98, 0.77, 0.42), 3.0, true)
 		var compact := r < 30.0
 		_draw_button_icon(key, c if compact else c - Vector2(0, r * 0.2), clampf(r / 46.0, 0.68, 1.25))
 		if compact:
