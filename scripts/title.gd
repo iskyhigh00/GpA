@@ -4,6 +4,7 @@ extends Control
 ## Los toques se gestionan a mano (el ratón no se emula desde el toque).
 
 const MAIN_SCENE := "res://scenes/main.tscn"
+const INTRO_SCENE := "res://scenes/intro.tscn"
 const BG_PATH := "res://assets/arte/titulo.jpg"
 const AMBER := Color(0.95, 0.72, 0.3)
 
@@ -45,7 +46,7 @@ func _process(delta: float) -> void:
 		fade_out = minf(1.0, fade_out + delta * 3.0)
 		if fade_out >= 1.0 and not launched:
 			launched = true
-			get_tree().change_scene_to_file(MAIN_SCENE)
+			get_tree().change_scene_to_file(INTRO_SCENE)
 	queue_redraw()
 
 

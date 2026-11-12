@@ -95,6 +95,12 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `CharacterStyle.recolor`: normal de grano fino (`Gfx.fabric_normal`, triplanar de objeto) y luz de contorno en los materiales de ropa; la piel no.
 - Siguiente salto de calidad: personajes y armas modelados de verdad (ver conceptos en `assets/arte` si se suben) con rig compatible con `ModelRig` (huesos Mixamo o los de Quaternius).
 
+## Panorama, introducción y guía de estilo
+- `assets/arte/panorama_puerto.jpg` (Gemini; el original de 4128×1024 se mezcló en los bordes para cerrar sin costura): cilindro alrededor de la lonja (`Level._build_skyline`), sin niebla, ya no se ve vacío negro sobre los muros.
+- `scripts/intro.gd` + `scenes/intro.tscn`: introducción de 6 cartelas (texto corregido con el prólogo) tras el título; carga `assets/intro/intro_01..06.png` si existen (pendientes de Gemini) y si no, cartela sobre fondo oscuro. Toque/Espacio avanzan, «Saltar» o Esc salen.
+- `docs/guia_de_estilo.md`: guía de DeepSeek con La Taza (barrio, no café) y El Telar (sala de bombas, no textil) corregidos.
+- Gemini solo entrega imágenes sueltas por el chat (no audio ni archivos); sus tareas de interfaz, introducción y vigía siguen pendientes.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

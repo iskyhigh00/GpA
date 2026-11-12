@@ -40,6 +40,8 @@ func _run() -> void:
 	await _t21_credits()
 	await _t22_arrow_buttons()
 	await _t23_labels()
+	await _t24_intro()
+	await _t25_skyline()
 	await _t22_objective_markers()
 	await _t15_combat_fixes()
 	await _t23_hook_combo()
@@ -1509,3 +1511,34 @@ func _west_routes(calm: bool) -> void:
 	print("    Promedio de los dos recorridos: %.2f s" % (total / 2.0))
 	if calm:
 		check(total / 2.0 >= 180.0 and total / 2.0 <= 240.0, "el perfil de exploración y lectura promedia entre 3 y 4 minutos")
+
+
+func _t24_intro() -> void:
+	print("24) Introducción")
+	check(Intro.LINES.size() == 6, "la introducción tiene 6 cartelas")
+	check(Intro.LINES.all(func(l: String) -> bool: return l.length() > 20 and l.length() < 130), "cada cartela es corta")
+	check(ResourceLoader.exists("res://scenes/intro.tscn") and Title.INTRO_SCENE == "res://scenes/intro.tscn", "el título lleva a la introducción")
+	var it := Intro.new()
+	root.add_child(it)
+	await _frames(3)
+	check(it.index == 0 and it.images.size() == 6, "empieza en la primera cartela con 6 imágenes previstas")
+	it.t = 1.0
+	it.advance()
+	check(it.index == 1, "avanzar pasa a la siguiente")
+	it.t = 0.0
+	it.advance()
+	check(it.index == 1, "un toque justo al cambiar se ignora")
+	it.index = 5
+	it.t = 1.0
+	it.advance()
+	check(it.finished, "tras la última cartela termina")
+	it.launched = true
+	it.queue_free()
+	await _frames(2)
+
+
+func _t25_skyline() -> void:
+	print("25) Panorama del puerto")
+	var lv := await new_level()
+	check(ResourceLoader.exists("res://assets/arte/panorama_puerto.jpg") and lv.skyline_built, "el panorama nocturno rodea la lonja")
+	await free_level(lv)

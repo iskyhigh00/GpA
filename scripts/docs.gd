@@ -154,7 +154,7 @@ SONIDO
 Freesound: Anthousai, xkeril, johnfolker, speedygonzo, Sandwichbill y MootMcnoodles. Ambiente y efectos de la lonja: material propio.
 
 IMÁGENES
-Carteles, decales, conceptos de personajes y arte del título generados con IA.
+Carteles, decales, conceptos de personajes, arte del título y panorama del puerto generados con IA.
 
 MOTOR
 Godot Engine, licencia MIT. https://godotengine.org

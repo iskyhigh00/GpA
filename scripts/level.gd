@@ -95,6 +95,7 @@ var pending_thoughts: Array = []
 var bark_i: Dictionary = {}
 var last_bark := ""
 var posters := 0
+var skyline_built := false
 var models_placed := 0
 var static_mesh_counts := Vector2i.ZERO
 var decals := 0
@@ -151,6 +152,7 @@ func _ready() -> void:
 	Quality.apply(get_viewport(), quality_env)
 	Gfx.capture_static_meshes = Gfx.headless
 	_build_world()
+	_build_skyline()
 	if expansion:
 		_build_west()
 	Gfx.capture_static_meshes = false
@@ -685,6 +687,40 @@ func spark(pos: Vector3, c: Color = Color(1.0, 0.8, 0.4)) -> void:
 	add_child(p)
 	p.emitting = true
 	get_tree().create_timer(1.0).timeout.connect(p.queue_free)
+
+
+## Panorama nocturno del puerto (Gemini) en un cilindro alrededor de la lonja: cierra el vacío negro
+## que se veía por encima de los muros.
+func _build_skyline() -> void:
+	var path := "res://assets/arte/panorama_puerto.jpg"
+	if not ResourceLoader.exists(path):
+		return
+	var tex := load(path) as Texture2D
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.albedo_color = Color(0.85, 0.9, 0.95)
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.cull_mode = BaseMaterial3D.CULL_FRONT
+	m.disable_fog = true
+	var radius := 46.0
+	var h := TAU * radius / (float(tex.get_width()) / float(tex.get_height()))
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = radius
+	cyl.bottom_radius = radius
+	cyl.height = h
+	cyl.radial_segments = 48
+	cyl.rings = 1
+	cyl.cap_top = false
+	cyl.cap_bottom = false
+	var mi := MeshInstance3D.new()
+	if not Gfx.headless:
+		mi.mesh = cyl
+	mi.material_override = m
+	mi.position = Vector3(9.0, 2.0 + h * 0.36 - h * 0.5 + 0.0, 0.0)
+	mi.rotation_degrees.y = 200.0
+	Gfx.no_shadow(mi)
+	add_child(mi)
+	skyline_built = true
 
 
 func _build_world() -> void:
