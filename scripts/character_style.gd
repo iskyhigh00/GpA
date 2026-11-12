@@ -27,6 +27,16 @@ static func recolor(model: Node3D, map: Dictionary) -> void:
 				nm.albedo_color = arr[0] as Color
 				nm.roughness = float(arr[1])
 				nm.metallic = float(arr[2])
+			if mat.resource_name != "Skin" and not Gfx.headless:
+				nm.normal_enabled = true
+				nm.normal_texture = Gfx.fabric_normal()
+				nm.normal_scale = 0.7
+				nm.uv1_triplanar = true
+				nm.uv1_world_triplanar = false
+				nm.uv1_scale = Vector3.ONE * 5.0
+			nm.rim_enabled = true
+			nm.rim = 0.45
+			nm.rim_tint = 0.5
 			mi.set_surface_override_material(i, nm)
 
 

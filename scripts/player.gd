@@ -92,18 +92,9 @@ func _add_gear() -> void:
 	if rig.is_model:
 		# En el hueso de la muñeca, +Y apunta por la mano y -X hacia delante (medido en el modelo).
 		CharacterStyle.style_sira(rig as ModelRig)
-		var grip := Gfx.box_m(Vector3(0.28, 0.075, 0.075), Gfx.mat_gloss(Color(0.08, 0.055, 0.04), 0.6))
-		grip.position = Vector3(-0.05, 0.07, 0.0)
-		rig.arm_r.add_child(grip)
-		var shaft := Gfx.box_m(Vector3(0.55, 0.05, 0.05), metal)
-		shaft.position = Vector3(-0.42, 0.07, 0.0)
-		rig.arm_r.add_child(shaft)
-		var hook_b := Gfx.box_m(Vector3(0.055, 0.24, 0.055), metal)
-		hook_b.position = Vector3(-0.69, 0.18, 0.0)
-		rig.arm_r.add_child(hook_b)
-		var hook_c := Gfx.box_m(Vector3(0.14, 0.055, 0.055), metal)
-		hook_c.position = Vector3(-0.64, 0.3, 0.0)
-		rig.arm_r.add_child(hook_c)
+		var weapon := Weapons.hook()
+		weapon.position = Vector3(0.0, 0.07, 0.0)
+		rig.arm_r.add_child(weapon)
 		return
 	var scarf := Gfx.cyl_m(0.2, 0.12, Gfx.mat_cloth(Color(0.8, 0.6, 0.2)))
 	scarf.position = Vector3(0.0, 0.86, 0.0)

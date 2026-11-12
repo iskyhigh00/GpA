@@ -415,3 +415,12 @@ static func image_mat(path: String, alpha: bool, rough: float = 0.85) -> Standar
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_mats[key] = m
 	return m
+
+
+## Normal de grano fino para telas y cuero en piezas con UV inútiles (se usa en triplanar de objeto).
+static func fabric_normal() -> NoiseTexture2D:
+	if _mats.has("fabric_normal"):
+		return _mats["fabric_normal"]
+	var t := _noise_tex(31, 0.09, Color.BLACK, Color.WHITE, true, 128)
+	_mats["fabric_normal"] = t
+	return t

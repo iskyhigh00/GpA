@@ -67,9 +67,9 @@ var knock := Vector3.ZERO
 var visual: Node3D
 var rig: Rig
 var last_state: S = S.PATROL
-var baton: MeshInstance3D
+var baton: Node3D
 var baton_mat: StandardMaterial3D
-var dropped: MeshInstance3D
+var dropped: Node3D
 var ring: MeshInstance3D
 var cone: MeshInstance3D
 var cone_mat: StandardMaterial3D
@@ -102,11 +102,14 @@ func _ready() -> void:
 	visual.add_child(rig.root)
 	var cap_mat := Gfx.mat_gloss(Color(0.12, 0.14, 0.17), 0.35)
 	baton_mat = Gfx.mat_glow(Color(0.9, 0.5, 0.15), 0.2).duplicate() as StandardMaterial3D
+	baton_mat.albedo_color = Color(0.2, 0.2, 0.23)
+	baton_mat.roughness = 0.4
+	baton_mat.metallic = 0.3
 	if rig.is_model:
 		# Huesos del modelo: en la cabeza Y sube y Z mira al frente; en la muñeca -X apunta hacia delante.
 		CharacterStyle.style_guard(rig as ModelRig)
-		baton = Gfx.box_m(Vector3(0.85, 0.09, 0.09), baton_mat)
-		baton.position = Vector3(-0.34, 0.07, 0.0)
+		baton = Weapons.baton(baton_mat)
+		baton.position = Vector3(0.0, 0.07, 0.0)
 	else:
 		var helmet := Gfx.sphere_m(0.23, cap_mat)
 		helmet.position = Vector3(0.0, 0.2, 0.02)
@@ -128,7 +131,7 @@ func _ready() -> void:
 	lantern.omni_range = 4.0
 	lantern.light_energy = 0.8
 	visual.add_child(lantern)
-	dropped = Gfx.box_m(Vector3(0.09, 0.09, 0.85), baton_mat)
+	dropped = Weapons.baton(baton_mat)
 	dropped.top_level = true
 	add_child(dropped)
 	ring = Gfx.disc(SLAM_RADIUS, Color(1.0, 0.15, 0.1, 0.0))
