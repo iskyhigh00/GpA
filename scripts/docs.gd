@@ -6,7 +6,7 @@ const ALL: Array[Dictionary] = [
 	{
 		"id": "orden", "cap": 1,
 		"titulo": "ORDEN DE INUNDACIÓN DE EMERGENCIA",
-		"texto": """Folio DO-2026-114 · Puerto Lumbre, 14/11/2026, 23:40
+		"texto": """Folio DO-2026-114 · Puerto Lumbre, 13/11/2026, 23:40
 De: Dirección de Operaciones Portuarias
 A: Elvira Roldal, jefa de El Telar; Roque Beltrán, capataz de cuadrillas
 Asunto: habilitación del sector La Taza como depósito de emergencia por grieta en el rompeolas.

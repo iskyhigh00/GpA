@@ -52,6 +52,16 @@ var was_low := false
 var hitstop_t := 0.0
 var update_opened := false
 var quality_env: Environment
+const BARKS: Dictionary = {
+	"alerta": ["Alto. Zona cerrada.", "No deberías estar aquí.", "Identifícate. Ahora."],
+	"pierde": ["Se ha ido.", "No veo nada."],
+	"ruido": ["¿Quién anda ahí?", "Oigo pasos."],
+	"golpe": ["¡Quieto!"],
+	"ataque": ["Te tengo."],
+	"derrota": ["Te dije que pararas."],
+}
+var bark_i: Dictionary = {}
+var last_bark := ""
 var posters := 0
 var decals := 0
 var updater: Updater
@@ -939,9 +949,20 @@ func perfect_dodge() -> void:
 	hud.say("¡Esquiva perfecta! Aprovecha el hueco.", 2.0)
 
 
+## Frases cortas del guardia como subtítulo; no pisan un mensaje importante en curso.
+func bark(kind: String) -> void:
+	var lines: Array = BARKS.get(kind, [])
+	if lines.is_empty() or hud.message_t > 0.8:
+		return
+	var i := int(bark_i.get(kind, 0))
+	bark_i[kind] = i + 1
+	last_bark = str(lines[i % lines.size()])
+	hud.say("Guardia: «%s»" % last_bark, 2.2)
+
+
 func on_guard_alert() -> void:
 	if hud.message_t < 1.0:
-		hud.say("¡El guardia te vio!", 2.5)
+		bark("alerta")
 	play("alarm")
 
 

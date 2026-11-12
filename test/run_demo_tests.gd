@@ -27,6 +27,7 @@ func _run() -> void:
 	await _t13_audio()
 	await _t14_quality()
 	await _t16_decor()
+	await _t17_barks()
 	await _t15_combat_fixes()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
@@ -628,4 +629,20 @@ func _t16_decor() -> void:
 	check(lv.decals >= 12, "hay decales de sangre, grietas, óxido, sal y moho (%d)" % lv.decals)
 	for f in ["mancha_sangre_seca", "charco_sangre", "oxido_en_gotas", "grieta_larga", "sal_en_juntas", "moho_esquina"]:
 		check(ResourceLoader.exists("res://assets/decales/%s.png" % f), "existe el decal «%s»" % f)
+	await free_level(lv)
+
+
+func _t17_barks() -> void:
+	print("17) Frases del guardia y cronología de folios")
+	var lv := await new_level()
+	await through_door(lv)
+	lv.hud.message_t = 0.0
+	lv.guard.alert(lv.player.global_position)
+	check(lv.last_bark == "Alto. Zona cerrada." and lv.hud.last_message.contains("Zona cerrada"), "al verte, el guardia dice su frase como subtítulo")
+	lv.hud.say("Mensaje importante", 3.0)
+	lv.bark("pierde")
+	check(lv.hud.last_message == "Mensaje importante", "una frase no pisa un mensaje importante en curso")
+	var orden := str(Docs.get_docs(["orden"])[0]["texto"])
+	var disp := str(Docs.get_docs(["dispensario"])[0]["texto"])
+	check(orden.contains("13/11/2026, 23:40") and disp.contains("14/11/2026, 00:20"), "la orden (13/11 23:40) precede a la nota del dispensario (14/11 00:20)")
 	await free_level(lv)

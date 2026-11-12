@@ -53,6 +53,11 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `level.gd`: `_poster()` y `_decal()` (planos con transparencia; el renderer Compatibility no admite `Decal`) y `_build_decor_images()` con las posiciones. Sustituyen a las etiquetas «LOTE 14» y «SUBASTA POR SECTORES».
 - De la tanda 3 aún no llegaron: modelos 3D de escenario, texturas extra, sonidos extra, música e iconos de botones.
 
+## Cronología de folios y frases del guardia
+- Orden de inundación fechada 13/11/2026 23:40 (antes decía 14/11, lo que la ponía ~23 h después de la nota del dispensario, 14/11 00:20, y del cierre de intendencia). Noche: ensayos 13/11 22:10-22:15 → orden 23:40 → dispensario 00:20 → cierre 01:00.
+- `Level.bark()` muestra frases del guardia como subtítulo (alerta, pierde, ruido, golpe, ataque, derrota) sin pisar mensajes importantes.
+- Material de DeepSeek revisado: solo se aprovecharon las frases del guardia. Descartado: diseño del cap. 2 (puzle de ritmo, guardia en el muelle y «canal viejo» no están en la historia; la historia pide reconfigurar cruces girando un pontón vacío con dos cabos), diálogo inicial (ignora que Sira despierta sin pulso en el consultorio), pensamientos de Sira (confunden la lámpara de riel y la bandeja con objetos de Sira), plan de pruebas (agachada, música, varios guardias: no existen) y números de combate (gancho 20 de reserva contradice el 2 acordado).
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.

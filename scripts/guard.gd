@@ -164,12 +164,14 @@ func take_hit() -> bool:
 	if away.length() > 0.05:
 		knock = -away.normalized() * 5.0
 	if hits >= 2:
+		level.bark("derrota")
 		state = S.DISARMED
 		velocity = Vector3.ZERO
 		baton.visible = false
 		dropped.visible = true
 		dropped.global_position = global_position + Vector3(0.0, 0.05, 0.0) + Vector3(sin(yaw), 0.0, cos(yaw)) * 0.9
 	else:
+		level.bark("golpe")
 		_begin_session()
 		state = S.STUNNED
 		timer = 1.2
@@ -187,6 +189,8 @@ func stagger(secs: float) -> void:
 func investigate(pos: Vector3) -> void:
 	if state != S.PATROL and state != S.INVESTIGATE:
 		return
+	if state == S.PATROL:
+		level.bark("ruido")
 	state = S.INVESTIGATE
 	target = Vector3(pos.x, 0.1, pos.z)
 	waiting = false
@@ -449,6 +453,7 @@ func _chase(sees: bool, pp: Vector3, delta: float) -> void:
 	else:
 		lost_t += delta
 		if lost_t > 5.0:
+			level.bark("pierde")
 			state = S.INVESTIGATE
 			target = last_seen
 			waiting = false
@@ -459,6 +464,7 @@ func _chase(sees: bool, pp: Vector3, delta: float) -> void:
 	var next_is_slam := attack_seq % 3 == 2
 	var reach := 2.4 if next_is_slam else 1.7
 	if dist <= reach and attack_cd <= 0.0:
+		level.bark("ataque")
 		state = S.WINDUP
 		slam = next_is_slam
 		timer = 0.9 if slam else 0.45
