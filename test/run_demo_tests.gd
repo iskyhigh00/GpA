@@ -22,6 +22,7 @@ func _run() -> void:
 	await _t7_lamp_detects()
 	await _t8_buttons()
 	await _t8_hud_icons()
+	await _t8_restart_hold()
 	await _t9_dodge()
 	await _t10_settings()
 	await _t11_models()
@@ -463,6 +464,7 @@ func _t5_touch_and_respawn() -> void:
 	lv.cart.t = IceCart.TREMBLE_TIME - 0.03
 	lv.player.do_hook()
 	touch(lv, 27, hud.button_center("restart"), true)
+	hud._tick_restart_hold(Hud.RESTART_HOLD)
 	check(hud.held.get("restart", 0) == 1, "Reiniciar conserva su indicador durante la pulsación")
 	check(lv.player.hit_pending < 0.0, "reiniciar cancela un golpe pendiente")
 	await _frames(10)
@@ -531,6 +533,8 @@ func _t8_buttons() -> void:
 	for name: String in got:
 		touch(lv, idx, lv.hud.button_center(name), true)
 		check(lv.hud.held[name] == 1, "botón %s resaltado" % name)
+		if name == "restart":
+			lv.hud._tick_restart_hold(Hud.RESTART_HOLD)
 		touch(lv, idx, lv.hud.button_center(name), false)
 		idx += 1
 		await _frames(2)
@@ -547,13 +551,13 @@ func _t8_hud_icons() -> void:
 	var hud := lv.hud
 	var vs := hud.view_size()
 	var expected := {
-		"hook": [Vector2(vs.x - 125.0, vs.y - 125.0), 66.0],
-		"dodge": [Vector2(vs.x - 270.0, vs.y - 70.0), 46.0],
+		"hook": [Vector2(vs.x - 125.0, vs.y - 125.0), 80.0],
+		"dodge": [Vector2(vs.x - 270.0, vs.y - 70.0), 56.0],
 		"force": [Vector2(vs.x - 285.0, vs.y - 185.0), 46.0],
 		"action": [Vector2(vs.x - 190.0, vs.y - 285.0), 46.0],
 		"ampoule": [Vector2(vs.x - 75.0, vs.y - 285.0), 46.0],
-		"restart": [Vector2(vs.x - 44.0, 44.0), 26.0],
-		"settings": [Vector2(vs.x - 104.0, 44.0), 26.0],
+		"restart": [Vector2(vs.x - 68.0, 68.0), 26.0],
+		"settings": [Vector2(vs.x - 128.0, 68.0), 26.0],
 	}
 	var buttons := hud.buttons()
 	check(Hud.CONTROL_LABEL_SIZE == 20 and buttons.size() == expected.size(), "los siete botones mantienen etiquetas de 20 px")
@@ -562,10 +566,31 @@ func _t8_hud_icons() -> void:
 		var radius: float = expected[key][1]
 		var b: Dictionary = buttons[key]
 		var edge := Vector2.LEFT if key == "settings" else Vector2.RIGHT if key == "restart" else Vector2.DOWN
+		var padding := 3.0 if radius < 30.0 else 6.0
 		check(b["c"] == center and b["r"] == radius and hud._hit_button(center) == key
-			and hud._hit_button(center + edge * (radius + 11.0)) == key
-			and hud._hit_button(center + edge * (radius + 13.0)) != key,
-			"%s conserva centro, radio y margen táctil" % key)
+			and hud._hit_button(center + edge * (radius + padding - 0.5)) == key
+			and hud._hit_button(center + edge * (radius + padding + 0.5)) != key,
+			"%s respeta centro, radio y margen táctil" % key)
+	var min_gap := INF
+	var keys := buttons.keys()
+	for i in keys.size():
+		var a: Dictionary = buttons[keys[i]]
+		var a_center: Vector2 = a["c"]
+		var a_radius: float = a["r"]
+		for j in range(i + 1, keys.size()):
+			var b: Dictionary = buttons[keys[j]]
+			var b_radius: float = b["r"]
+			var hit_radii := a_radius + b_radius + (3.0 if a_radius < 30.0 else 6.0) + (3.0 if b_radius < 30.0 else 6.0)
+			min_gap = minf(min_gap, a_center.distance_to(b["c"]) - hit_radii)
+	check(min_gap > 0.0, "ninguna zona táctil circular se solapa con otra")
+	var safe := hud.safe_area()
+	check(safe == Rect2(40.0, 40.0, vs.x - 80.0, vs.y - 80.0)
+		and safe.encloses(Rect2(Hud.BAR_POS, Hud.BAR_SIZE).grow(3.0)),
+		"la barra con su contorno cabe dentro del margen seguro de 40 px")
+	for key in ["settings", "restart"]:
+		var center := hud.button_center(key)
+		check(safe.encloses(Rect2(center - Vector2.ONE * 27.5, Vector2.ONE * 55.0)),
+			"el botón %s y su borde caben dentro del margen seguro" % key)
 	# Pide un redibujado con todos los iconos y el gancho pulsado.
 	var draws := [0]
 	hud.canvas.draw.connect(func() -> void: draws[0] += 1, CONNECT_ONE_SHOT)
@@ -573,6 +598,47 @@ func _t8_hud_icons() -> void:
 	hud.canvas.queue_redraw()
 	await _frames(4)
 	check(draws[0] == 1, "el canvas dibuja el HUD con los iconos y el estado pulsado")
+	await free_level(lv)
+
+
+func _t8_restart_hold() -> void:
+	print("8c) Pulsación larga para reiniciar")
+	var lv := await new_level()
+	var hud := lv.hud
+	var center := hud.button_center("restart")
+	var count := [0]
+	hud.restart_pressed.connect(func() -> void: count[0] += 1)
+	touch(lv, 31, center, true)
+	await _frames(16)
+	check(count[0] == 0 and hud.restart_progress() > 0.0 and hud.restart_progress() < 1.0,
+		"la pulsación muestra progreso antes del umbral sin reiniciar")
+	touch(lv, 31, center, false)
+	await _frames(44)
+	check(count[0] == 0 and not lv.dying and hud.restart_progress() == 0.0, "soltar pronto cancela el reinicio")
+
+	touch(lv, 31, center, true)
+	hud._tick_restart_hold(0.58)
+	touch(lv, 32, center, true)
+	drag(lv, 31, center - Vector2(0, 35), Vector2(0, -35))
+	drag(lv, 31, center, Vector2(0, 35))
+	await _frames(45)
+	check(count[0] == 0 and hud.restart_progress() == 0.0,
+		"salir de la zona cancela el anillo y otro dedo no hereda la pulsación")
+	touch(lv, 31, center, false)
+	touch(lv, 32, center, false)
+
+	touch(lv, 31, center, true)
+	hud._tick_restart_hold(0.59)
+	check(count[0] == 0 and not lv.dying, "0,59 s sigue por debajo del umbral")
+	hud._tick_restart_hold(0.01)
+	check(count[0] == 1 and lv.dying, "0,60 s emite el reinicio una sola vez")
+	await _frames(80)
+	check(count[0] == 1 and not lv.dying, "mantener el dedo no vuelve a reiniciar")
+	touch(lv, 31, center, false)
+	touch(lv, 31, center, true)
+	check(await until(func() -> bool: return count[0] == 2, 50),
+		"una pulsación larga completa activa el reinicio a través del bucle real")
+	await _frames(45)
 	await free_level(lv)
 
 
