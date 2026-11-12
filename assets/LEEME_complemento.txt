@@ -1,0 +1,39 @@
+EL TURNO DE LA SAL — TANDA 3 — COMPLEMENTO DE ESCENARIO
+
+Modelos en glTF 2.0 con .bin y rutas relativas. Copia la carpeta completa de cada modelo para mantener las referencias a sus texturas. Todos están por debajo del límite de 20.000 triángulos.
+
+Licencia de los cuatro recursos de origen: CC0 1.0 Universal — https://creativecommons.org/publicdomain/zero/1.0/
+
+Anchor — modelos/ancla/
+Autor: Quaternius
+Fuente y licencia: Poly Pizza — https://poly.pizza/m/ejWQny9Gcz
+Descarga de origen: https://static.poly.pizza/c98455e8-6458-44c3-93c5-53f4244497fd.glb
+Triángulos: 544. Tamaño sin comprimir: 52785 bytes.
+Conversión de GLB a glTF separado. Geometría, escala y material originales. Atlas_Pirate.png original de 1024 × 1024.
+
+Fishing net — modelos/red_pesca/
+Autor: Frakassets (Pixor)
+Fuente y licencia: Pixor Library — https://pixor.art/library/tools/fishing-net/
+Descarga de origen: https://pixor.art/library/files/fishing-net/pixor-library-fishing-net.glb
+Triángulos: 612. Tamaño sin comprimir: 32552 bytes.
+Conversión de GLB a glTF separado. Conserva la red, el bastidor, los flotadores y sus colores de material originales. La fuente usa factores de color por material.
+
+Meat Hook 5 — modelos/gancho_carnicero/
+Autor: Marcel Plagmann (plaggy)
+Fuente y licencia: OpenGameArt — https://opengameart.org/content/meat-hook-5
+Descarga de origen: https://opengameart.org/sites/default/files/meat_hook_5.zip
+Triángulos: 2624. Tamaño sin comprimir: 1355681 bytes.
+Exportado desde el FBX original, conservando sus UV, escala física (21 cm de alto) y geometría. Se omitió una pista de transformación constante del FBX. Mapas originales de 2K reducidos a 1K PNG. Normal adaptada a +Y, comprobada por continuidad en las costuras UV. ARM empaquetado con AO, rugosidad y metalicidad de origen.
+
+Glass Frosted 003 — texturas/glass_frosted_003/
+Autor: Katsukagi
+Fuente y licencia: 3DTextures — https://3dtextures.me/2026/05/27/glass-frosted-003-free-seamless-pbr-texture/
+Carpeta de origen: https://drive.google.com/drive/folders/1IKVzGNZOimP-Ix-5rG5h23dNslIFGr_d?usp=sharing
+Mapas JPG de 1024 × 1024: color, normal y ARM. Conserva el patrón geométrico y la orientación de la normal publicada. JPG de calidad 98 sin submuestreo cromático.
+ARM: rojo = AO original (blanco), verde = rugosidad original, azul = metalicidad 0 para el vidrio.
+El mapa de transmisión original es blanco uniforme. Para representar vidrio translúcido, configura la transparencia o transmisión en el material.
+Glass_Frosted_003_basecolor.png: https://drive.usercontent.google.com/download?id=1EeV0jPscMTtynaHBKcUqU1-O-l7vYYzB&export=download&confirm=t
+Glass_Frosted_003_normal.png: https://drive.usercontent.google.com/download?id=1ngtK32dXnLQzOt3Fm_1mL5YAvj2XC-qn&export=download&confirm=t
+Glass_Frosted_003_ambientOcclusion.png: https://drive.usercontent.google.com/download?id=1sNsxXctRF3kkQ-_CfvXxmqUZBDFSgQGt&export=download&confirm=t
+Glass_Frosted_003_roughness.png: https://drive.usercontent.google.com/download?id=1yOAi3KvJjr3mBsCNNi1_8sI-R0-Vrriw&export=download&confirm=t
+Glass_Frosted_003_transmissive.png: https://drive.usercontent.google.com/download?id=1wKneA3dw4NKFNWTiXFMxo5OI76GGDaHj&export=download&confirm=t

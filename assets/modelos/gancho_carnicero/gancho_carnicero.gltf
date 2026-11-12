@@ -1,0 +1,161 @@
+{
+  "asset": {
+    "generator": "Khronos glTF Blender I/O v4.3.47",
+    "version": "2.0"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "Meat Hook 5"
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Meat Hook 5",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2,
+            "TANGENT": 3
+          },
+          "indices": 4,
+          "material": 0
+        }
+      ]
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 1791,
+      "max": [
+        0.030393637716770172,
+        0.10665459930896759,
+        0.04938013479113579
+      ],
+      "min": [
+        -0.0463651604950428,
+        -0.10311130434274673,
+        -0.049380142241716385
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 1791,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 1791,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 1791,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5123,
+      "count": 7872,
+      "type": "SCALAR"
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 21492,
+      "byteOffset": 0,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 21492,
+      "byteOffset": 21492,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 14328,
+      "byteOffset": 42984,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 28656,
+      "byteOffset": 57312,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 15744,
+      "byteOffset": 85968,
+      "target": 34963
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 101712,
+      "uri": "gancho_carnicero.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "texturas/gancho_carnicero_diff_1k.png"
+    },
+    {
+      "uri": "texturas/gancho_carnicero_nor_gl_1k.png"
+    },
+    {
+      "uri": "texturas/gancho_carnicero_arm_1k.png"
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    },
+    {
+      "source": 1
+    },
+    {
+      "source": 2
+    }
+  ],
+  "materials": [
+    {
+      "name": "Meat Hook 5 PBR",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 2
+        },
+        "metallicFactor": 1.0,
+        "roughnessFactor": 1.0
+      },
+      "normalTexture": {
+        "index": 1
+      },
+      "occlusionTexture": {
+        "index": 2
+      }
+    }
+  ]
+}

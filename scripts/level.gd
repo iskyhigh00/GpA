@@ -63,6 +63,7 @@ const BARKS: Dictionary = {
 var bark_i: Dictionary = {}
 var last_bark := ""
 var posters := 0
+var models_placed := 0
 var decals := 0
 var updater: Updater
 
@@ -314,7 +315,7 @@ func _window(pos: Vector3, rot_y: float, c: Color, beam_to: Vector3) -> void:
 	w.position = pos
 	w.rotation_degrees.y = rot_y
 	add_child(w)
-	var glass := Gfx.box_m(Vector3(1.1, 1.8, 0.06), Gfx.mat_glow(c, 1.8))
+	var glass := Gfx.box_m(Vector3(1.1, 1.8, 0.06), Gfx.mat_glass(c, 1.0))
 	w.add_child(glass)
 	var frame := Gfx.mat_rust()
 	var v := Gfx.box_m(Vector3(0.08, 1.9, 0.1), frame)
@@ -445,6 +446,38 @@ func _decal(file: String, pos: Vector3, size: float, rot_deg: float = 0.0, wall:
 		q.rotation_degrees = Vector3(-90.0, rot_deg, 0.0)
 	add_child(q)
 	decals += 1
+
+
+## Modelo glTF de assets/modelos (CC0) colocado como decorado.
+func _model(name_id: String, pos: Vector3, rot_y: float, scale_f: float) -> Node3D:
+	var path := "res://assets/modelos/%s/%s.gltf" % [name_id, name_id]
+	if not ResourceLoader.exists(path):
+		return null
+	var ps := load(path) as PackedScene
+	if ps == null:
+		return null
+	var n := ps.instantiate() as Node3D
+	n.position = pos
+	n.rotation_degrees.y = rot_y
+	n.scale = Vector3.ONE * scale_f
+	add_child(n)
+	models_placed += 1
+	return n
+
+
+func _build_model_props() -> void:
+	_model("ancla", Vector3(20.2, 0.05, 8.2), 30.0, 1.7)
+	_model("red_pesca", Vector3(16.0, 0.0, -9.55), 0.0, 1.5)
+	for x in [4.6, 5.3, 6.0, 14.2, 14.9]:
+		_model("gancho_carnicero", Vector3(x, 1.9, -9.6), 90.0 + x * 20.0, 3.0)
+	var rail := Gfx.cyl_m(0.04, 2.0, Gfx.mat_steel())
+	rail.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+	rail.position = Vector3(5.3, 2.2, -9.6)
+	add_child(rail)
+	var rail2 := Gfx.cyl_m(0.04, 1.6, Gfx.mat_steel())
+	rail2.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+	rail2.position = Vector3(14.55, 2.2, -9.6)
+	add_child(rail2)
 
 
 func _build_decor_images() -> void:
@@ -667,7 +700,7 @@ func _build_world() -> void:
 		paper.position = Vector3(0.25 - i * 0.55, 0.51, 0.1 - i * 0.12)
 		paper.rotation_degrees.y = 14.0 - i * 31.0
 		desk.add_child(paper)
-	var win := Gfx.box_m(Vector3(0.05, 1.4, 2.0), Gfx.mat_glow(Color(0.45, 0.6, 0.9), 1.4))
+	var win := Gfx.box_m(Vector3(0.05, 1.4, 2.0), Gfx.mat_glass(Color(0.45, 0.6, 0.9), 0.9))
 	win.position = Vector3(-14.95, 2.0, -0.5)
 	add_child(win)
 	_sign("CONSULTORIO", Vector3(-4.8, 2.85, 0.0), 90.0, Color(0.85, 0.85, 0.75), 0.008)
@@ -729,6 +762,7 @@ func _build_world() -> void:
 	add_child(grate_plate)
 	_build_gothic()
 	_build_decor_images()
+	_build_model_props()
 	_build_particles()
 
 

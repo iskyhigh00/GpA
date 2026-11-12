@@ -28,6 +28,7 @@ func _run() -> void:
 	await _t14_quality()
 	await _t16_decor()
 	await _t17_barks()
+	await _t18_models()
 	await _t15_combat_fixes()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
@@ -645,4 +646,14 @@ func _t17_barks() -> void:
 	var orden := str(Docs.get_docs(["orden"])[0]["texto"])
 	var disp := str(Docs.get_docs(["dispensario"])[0]["texto"])
 	check(orden.contains("13/11/2026, 23:40") and disp.contains("14/11/2026, 00:20"), "la orden (13/11 23:40) precede a la nota del dispensario (14/11 00:20)")
+	await free_level(lv)
+
+
+func _t18_models() -> void:
+	print("18) Modelos de escenario y vidrio")
+	var lv := await new_level()
+	check(lv.models_placed == 7, "ancla, red y 5 ganchos de carnicero colocados (%d)" % lv.models_placed)
+	for n in ["ancla", "red_pesca", "gancho_carnicero"]:
+		check(ResourceLoader.exists("res://assets/modelos/%s/%s.gltf" % [n, n]), "existe el modelo «%s»" % n)
+	check(Gfx.mat_glass(Color(0.4, 0.6, 1.0)).albedo_texture != null, "el vidrio esmerilado usa su textura")
 	await free_level(lv)

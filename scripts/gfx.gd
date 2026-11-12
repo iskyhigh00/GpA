@@ -237,6 +237,28 @@ static func mat_mossy() -> BaseMaterial3D:
 	return m if m else mat_wood()
 
 
+## Vidrio esmerilado (3dtextures.me, CC0) teñido y luminoso, para vitrales y ventanas.
+static func mat_glass(c: Color, energy: float = 1.0) -> StandardMaterial3D:
+	var key := "glass%s%f" % [c.to_html(), energy]
+	if _mats.has(key):
+		return _mats[key]
+	var path := "res://assets/texturas/glass_frosted_003/glass_frosted_003_diff_1k.jpg"
+	if not ResourceLoader.exists(path):
+		return mat_glow(c, energy)
+	var m := StandardMaterial3D.new()
+	var tex := load(path) as Texture2D
+	m.albedo_texture = tex
+	m.albedo_color = c
+	m.emission_enabled = true
+	m.emission = c
+	m.emission_texture = tex
+	m.emission_energy_multiplier = energy
+	m.roughness = 0.4
+	m.uv1_scale = Vector3(1.0, 1.6, 1.0)
+	_mats[key] = m
+	return m
+
+
 static func mat_plate() -> BaseMaterial3D:
 	var m := _pbr("plate", "metal_plate", "metal_plate", "1k", 0.8, 0.12)
 	return m if m else mat_rust()
