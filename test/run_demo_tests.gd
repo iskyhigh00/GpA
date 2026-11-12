@@ -20,6 +20,7 @@ func _run() -> void:
 	await _t5_touch_and_respawn()
 	await _t6_lamp_signal()
 	await _t7_lamp_detects()
+	await _t7_north_sprints()
 	await _t8_buttons()
 	await _t8_hud_icons()
 	await _t9_dodge()
@@ -186,10 +187,12 @@ func _t2_north() -> void:
 	check(lv.tray.state == Tray.S.ROLLING, "la bandeja rueda")
 	check(await walk(lv, Vector3(-1.0, 0.1, -3.5)), "espera cerca del paso norte")
 	check(await until(func() -> bool: return lv.lamp.state == RailLamp.S.ATTRACTED), "la lámpara es atraída")
+	check(absf(lv.lamp.t - 8.0) < 0.05, "el golpe de la bandeja inicia la distracción de 8 s")
 	check(g.state == Guard.S.INVESTIGATE, "el guardia va a investigar")
 	check(lv.tray.state == Tray.S.SPENT, "la bandeja llegó (clang)")
 	var ok := await walk_path(lv, [Vector3(5.0, 0.1, -6.5), Vector3(9.0, 0.1, -6.5), Vector3(13.0, 0.1, -5.0), Vector3(14.0, 0.1, -2.0)])
 	check(ok, "cruza el paso norte")
+	check(lv.lamp.state == RailLamp.S.ATTRACTED and lv.lamp.t > 0.0, "termina el cruce antes de que acabe la distracción")
 	check(lv.route == "norte", "ruta registrada: norte")
 	check(g.alert_count == 0 and g.state != Guard.S.CHASE, "el guardia nunca se alertó")
 	lv.try_force()
@@ -457,6 +460,40 @@ func _t7_lamp_detects() -> void:
 	await through_door(lv)
 	lv.player.global_position = Vector3(lv.lamp.aim.x, 0.1, RailLamp.RAIL_Z)
 	check(await until(func() -> bool: return lv.guard.state == Guard.S.CHASE, 300), "el guardia pasa a perseguir")
+	await free_level(lv)
+
+
+func _t7_north_sprints() -> void:
+	print("7b) Sprint norte sin bandeja")
+	var lv := await new_level()
+	await through_door(lv)
+	# La detección sigue alertando al guardia. Su movimiento no debe bloquear el recorrido medido.
+	lv.guard.set_physics_process(false)
+	var lamp := lv.lamp
+	var spots := [0]
+	lamp.spotted.connect(func() -> void: spots[0] += 1)
+	var half_cycle := RailLamp.DWELL_TIME + RailLamp.SIGNAL_TIME + (RailLamp.B_X - RailLamp.A_X) / RailLamp.SPEED
+	var lanes := [-7.55, -6.5, -5.45]
+	var crossed := 0
+	var detected := 0
+	for attempt in 10:
+		lv.player.respawn_at(Level.CHECK_POS)
+		lamp.reset()
+		lv.guard.reset()
+		var start_frame := roundi(120.0 * half_cycle * (attempt + 0.5) / 10.0)
+		await _frames(start_frame)
+		var z: float = lanes[attempt % lanes.size()]
+		var before: int = spots[0]
+		lv.player.respawn_at(Vector3(6.2, 0.1, z))
+		if await walk(lv, Vector3(13.1, 0.1, z), 0.12, 160):
+			crossed += 1
+		if spots[0] > before and lv.guard.state == Guard.S.CHASE:
+			detected += 1
+	check(crossed == 10 and lv.tray.state == Tray.S.READY, "los diez sprints recorren el paso sin empujar la bandeja")
+	check(detected >= 9, "sprint sin bandeja = detectado en %d/10 fases del barrido" % detected)
+	var far_corner := Vector2(Level.DIVIDER_X - RailLamp.A_X, -8.0 - RailLamp.RAIL_Z)
+	check(RailLamp.RADIUS >= far_corner.length(),
+		"el círculo alcanza todo el ancho del paso incluso desde un extremo del riel")
 	await free_level(lv)
 
 

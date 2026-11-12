@@ -12,8 +12,9 @@ const A_X := 5.0
 const B_X := 13.0
 const RAIL_Z := -6.5
 const HEIGHT := 4.0
-const SPEED := 2.8
-const RADIUS := 2.3
+const SPEED := 4.0
+# Desde x = 5 o x = 13 hasta el borde más lejano del paso en x = 9 hay 4,27 m.
+const RADIUS := 4.4
 const DETECT_TIME := 0.5
 const DWELL_TIME := 0.8
 const SIGNAL_TIME := 0.9
