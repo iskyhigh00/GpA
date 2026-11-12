@@ -14,10 +14,12 @@ const DURATION := 2.8
 
 var state: S = S.READY
 var t := 0.0
+var objective_material: StandardMaterial3D
 
 
 func _ready() -> void:
 	var plate := Gfx.box_mesh(Vector3(0.9, 0.08, 0.6), Color(0.75, 0.78, 0.8))
+	objective_material = plate.material_override as StandardMaterial3D
 	add_child(plate)
 	var rim := Gfx.box_mesh(Vector3(0.94, 0.14, 0.04), Color(0.6, 0.63, 0.66))
 	rim.position = Vector3(0.0, 0.05, 0.3)

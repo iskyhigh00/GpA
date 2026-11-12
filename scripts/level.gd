@@ -1078,6 +1078,7 @@ func do_action() -> void:
 		return
 	if tray.state == Tray.S.READY and flat_dist(p, tray.start_pos()) < 2.4:
 		tray.push()
+		_update_objective_highlights()
 		play("push")
 		play("tray_roll", -2.0)
 		hud.say("Empujas la bandeja por el carril…")
@@ -1136,6 +1137,7 @@ func _begin_respawn(delay: float, keep_restart_touch: bool = false) -> void:
 	cart.set_physics_process(false)
 	hud.prepare_respawn(keep_restart_touch)
 	hud.fade_target = 1.0
+	_update_objective_highlights()
 
 
 func _respawn() -> void:
@@ -1193,6 +1195,7 @@ func finish() -> void:
 	hud.show_end(lines)
 	hud.objective = ""
 	hud.prompts = []
+	_update_objective_highlights()
 
 
 func _cycle_quality() -> void:
@@ -1287,12 +1290,41 @@ func _set_objective() -> void:
 		hud.objective = "El carro se mueve…"
 	else:
 		hud.objective = "Llega al carro de hielo. Norte: sigilo con la bandeja · Sur: guardia"
+	_update_objective_highlights()
+
+
+func objective_marker_target() -> Node3D:
+	if phase != Phase.PLAY or dying:
+		return null
+	if grate_open:
+		return grate_plate
+	if cart.state != IceCart.S.FROZEN:
+		return null
+	if tray.state == Tray.S.READY and route == "":
+		return tray
+	return cart.body
+
+
+func _update_objective_highlights() -> void:
+	var target := objective_marker_target()
+	var pulse := 0.18 + 0.12 * (0.5 + 0.5 * sin(elapsed * TAU / 1.5))
+	_set_objective_emission(tray.objective_material, pulse if target == tray else 0.0)
+	_set_objective_emission(cart.objective_material, pulse if target == cart.body else 0.0)
+
+
+func _set_objective_emission(material: BaseMaterial3D, energy: float) -> void:
+	if is_equal_approx(material.emission_energy_multiplier, energy) and material.emission_enabled == (energy > 0.0):
+		return
+	material.emission_enabled = energy > 0.0
+	material.emission = Color(1.0, 0.73, 0.32)
+	material.emission_energy_multiplier = energy
 
 
 # ---------------------------------------------------------------- bucle
 
 func _process(delta: float) -> void:
 	_update_audio(delta)
+	_update_objective_highlights()
 	player.touch_move = hud.move_vec
 	if Input.is_action_just_pressed("hook"):
 		player.do_hook()

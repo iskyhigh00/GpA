@@ -23,6 +23,7 @@ const DEADZONE := 0.15
 const BAR_POS := Vector2(24.0, 44.0)
 const BAR_SIZE := Vector2(380.0, 26.0)
 const CONTROL_LABEL_SIZE := 20
+const ARROW_INSET := 36.0
 
 var level: Level
 var canvas: Control
@@ -402,6 +403,7 @@ func _text(pos: Vector2, s: String, size: int, col: Color, align: HorizontalAlig
 func _draw_ui() -> void:
 	var vs := view_size()
 	canvas.draw_texture_rect(vignette, Rect2(Vector2.ZERO, vs), false)
+	_draw_objective_arrow(vs)
 	_draw_bar()
 	_draw_texts(vs)
 	_draw_controls(vs)
@@ -417,6 +419,41 @@ func _draw_ui() -> void:
 		_draw_doc(vs)
 	if dialog_visible:
 		_draw_dialog(vs)
+
+
+static func objective_arrow(camera: Camera3D, point: Vector3, size: Vector2) -> PackedVector2Array:
+	var center := size * 0.5
+	var direction: Vector2
+	if camera.is_position_behind(point):
+		var local := camera.get_camera_transform().affine_inverse() * point
+		direction = Vector2(local.x, -local.y)
+		if direction.is_zero_approx():
+			direction = Vector2.DOWN
+	else:
+		var screen := camera.unproject_position(point)
+		if Rect2(Vector2.ZERO, size).has_point(screen):
+			return []
+		direction = screen - center
+	direction = direction.normalized()
+	var bounds := (center - Vector2.ONE * ARROW_INSET).max(Vector2.ONE)
+	var edge := center + direction / maxf(absf(direction.x) / bounds.x, absf(direction.y) / bounds.y)
+	var side := direction.orthogonal()
+	return [edge + direction * 10.0, edge - direction * 8.0 + side * 7.0,
+		edge - direction * 4.0, edge - direction * 8.0 - side * 7.0]
+
+
+func _draw_objective_arrow(size: Vector2) -> void:
+	if level == null or settings_visible or doc_visible or dialog_visible or end_visible:
+		return
+	var target := level.objective_marker_target()
+	if target == null:
+		return
+	var points := objective_arrow(level.player.cam, target.global_position, size)
+	if points.is_empty():
+		return
+	canvas.draw_colored_polygon(points, Color(0.98, 0.77, 0.42))
+	for i in points.size():
+		canvas.draw_line(points[i], points[(i + 1) % points.size()], Color(0.14, 0.09, 0.05), 1.5, true)
 
 
 func _draw_bar() -> void:

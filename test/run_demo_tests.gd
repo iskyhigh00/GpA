@@ -35,6 +35,7 @@ func _run() -> void:
 	await _t19_dialogue()
 	await _t20_docs_cap2()
 	await _t21_credits()
+	await _t22_objective_markers()
 	await _t15_combat_fixes()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
@@ -133,6 +134,62 @@ func guard_not_alerted() -> void:
 
 
 # ---------------------------------------------------------------- pruebas
+
+func _t22_objective_markers() -> void:
+	print("22) Marcadores de objetivo")
+	var lv := await new_level(false)
+	var tray_mat := lv.tray.objective_material
+	var cart_mat := lv.cart.objective_material
+	check(lv.objective_marker_target() == null and not tray_mat.emission_enabled and not cart_mat.emission_enabled,
+		"el tutorial no señala objetivos de la lonja")
+	lv.skip_tutorial()
+	await through_door(lv)
+	check(lv.objective_marker_target() == lv.tray and tray_mat.emission_enabled and not cart_mat.emission_enabled,
+		"al entrar, la bandeja es el objetivo y solo ella emite")
+	var energy := tray_mat.emission_energy_multiplier
+	await _frames(24)
+	check(not is_equal_approx(energy, tray_mat.emission_energy_multiplier), "el resaltado de la bandeja pulsa")
+	lv.player.global_position = lv.tray.start_pos() + Vector3.UP * 0.1
+	lv.do_action()
+	check(lv.objective_marker_target() == lv.cart.body and not tray_mat.emission_enabled and cart_mat.emission_enabled,
+		"al empujar se apaga la bandeja y se ilumina el carro")
+	energy = cart_mat.emission_energy_multiplier
+	await _frames(24)
+	check(not is_equal_approx(energy, cart_mat.emission_energy_multiplier), "el resaltado del carro pulsa")
+	lv.player.global_position = IceCart.HOME + Vector3(0, 0.1, -2)
+	lv.try_force()
+	check(lv.objective_marker_target() == null and not cart_mat.emission_enabled,
+		"al arrancar el carro desaparecen el marcador y su emisión")
+	check(await until(func() -> bool: return lv.grate_open, 240), "el carro abre la rejilla")
+	check(lv.objective_marker_target() == lv.grate_plate and not tray_mat.emission_enabled and not cart_mat.emission_enabled,
+		"al abrirse, solo se señala el hueco de la rejilla")
+	lv.request_restart()
+	check(lv.objective_marker_target() == null, "durante el reinicio no hay marcador")
+	check(await until(func() -> bool: return not lv.dying, 100), "el reinicio regresa al punto de control")
+	check(lv.objective_marker_target() == lv.tray and tray_mat.emission_enabled, "al reaparecer se restaura el marcador")
+	lv.player.global_position = Vector3(11, 0.1, 6.5)
+	await _frames(3)
+	check(lv.tray.state == Tray.S.READY and lv.objective_marker_target() == lv.cart.body and not tray_mat.emission_enabled,
+		"la ruta sur deja la bandeja opcional y señala el carro")
+
+	var camera := lv.player.cam
+	camera.global_transform = Transform3D.IDENTITY
+	var vs := lv.hud.view_size()
+	check(Hud.objective_arrow(camera, Vector3(0, 0, -4), vs).is_empty(),
+		"un objetivo en pantalla no dibuja flecha")
+	var right := Hud.objective_arrow(camera, Vector3(30, 0, -4), vs)
+	var left := Hud.objective_arrow(camera, Vector3(-30, 0, 4), vs)
+	var behind := Hud.objective_arrow(camera, Vector3(0, 0, 4), vs)
+	check(right.size() == 4 and right[0].x > vs.x - Hud.ARROW_INSET and right[0].x < vs.x,
+		"un objetivo fuera del encuadre derecho apunta al borde derecho")
+	check(left.size() == 4 and left[0].x > 0.0 and left[0].x < Hud.ARROW_INSET,
+		"un objetivo detrás y a la izquierda conserva su lado")
+	check(behind.size() == 4 and behind[0].y > vs.y - Hud.ARROW_INSET and behind[0].y < vs.y,
+		"un objetivo directamente detrás se señala por abajo")
+	lv.finish()
+	check(lv.objective_marker_target() == null and not cart_mat.emission_enabled, "al terminar se apagan los marcadores")
+	await free_level(lv)
+
 
 func _t1_tutorial() -> void:
 	print("1) Tutorial")

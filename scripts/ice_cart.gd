@@ -16,10 +16,12 @@ var state: S = S.FROZEN
 var t := 0.0
 var body: StaticBody3D
 var crust: MeshInstance3D
+var objective_material: BaseMaterial3D
 
 
 func _ready() -> void:
-	body = Gfx.solid_m(self, Vector3(0.0, 0.7, 0.0), Vector3(2.0, 0.9, 1.1), Gfx.mat_steel(), 2)
+	objective_material = Gfx.mat_steel().duplicate() as BaseMaterial3D
+	body = Gfx.solid_m(self, Vector3(0.0, 0.7, 0.0), Vector3(2.0, 0.9, 1.1), objective_material, 2)
 	for i in 3:
 		var ice := Gfx.box_mesh(Vector3(0.55, 0.45, 0.8), Color(0.7, 0.9, 1.0), 0.2)
 		ice.position = Vector3(-0.65 + i * 0.65, 0.58, 0.0)
