@@ -5,6 +5,7 @@ extends SceneTree
 var fails := 0
 var checks := 0
 var monitor := Callable()
+const DEATH_FRAMES := 750
 
 
 func _initialize() -> void:
@@ -39,6 +40,8 @@ func _run() -> void:
 	await _t21_credits()
 	await _t22_objective_markers()
 	await _t15_combat_fixes()
+	await _t23_hook_combo()
+	await _t24_death_animation()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
 	quit(1 if fails > 0 else 0)
@@ -355,7 +358,7 @@ func _t5_checkpoint() -> void:
 	check(lv.grate_open and not lv.kit_available and lv.cart.state != IceCart.S.FROZEN, "carro, botiquín y rejilla alterados")
 	lv.spend(500.0)
 	check(lv.dying, "Sira muere sin reserva")
-	check(await until(func() -> bool: return not lv.dying, 200), "reaparece")
+	check(await until(func() -> bool: return not lv.dying, DEATH_FRAMES), "reaparece")
 	check(lv.player.global_position.distance_to(Level.CHECK_POS) < 0.7, "en el punto de control")
 	check(is_equal_approx(lv.reserve, 100.0) and lv.ampoules == 0, "reserva restaurada")
 	check(lv.tray.state == Tray.S.READY and is_equal_approx(lv.tray.position.x, Tray.START_X), "bandeja restaurada")
@@ -426,7 +429,7 @@ func _t5_touch_and_respawn() -> void:
 		hud.set_settings(false)
 	await _frames(8)
 	check(lv.flat_dist(lv.player.global_position, before) < 0.05, "el personaje no se desliza durante la muerte")
-	check(await until(func() -> bool: return not lv.dying, 180), "reaparece tras morir en plena esquiva")
+	check(await until(func() -> bool: return not lv.dying, DEATH_FRAMES), "reaparece tras morir en plena esquiva")
 	check(not lv.player.locked and lv.player.dodge_cd == 0.0, "recupera los controles y la esquiva")
 	await free_level(lv)
 
@@ -438,14 +441,14 @@ func _t5_touch_and_respawn() -> void:
 	check(not paused and not hud.settings_visible, "morir con Ajustes abierto permite avanzar el reinicio")
 	if paused:
 		hud.set_settings(false)
-	check(await until(func() -> bool: return not lv.dying, 180), "reaparece desde Ajustes")
+	check(await until(func() -> bool: return not lv.dying, DEATH_FRAMES), "reaparece desde Ajustes")
 	hud.open_docs(Docs.get_docs(["orden"]))
 	check(paused and hud.doc_visible, "un folio está abierto antes de la muerte")
 	lv.spend(lv.reserve)
 	check(not paused and not hud.doc_visible, "morir con un folio abierto permite avanzar el reinicio")
 	if paused:
 		hud.close_docs()
-	check(await until(func() -> bool: return not lv.dying, 180), "reaparece desde el lector de folios")
+	check(await until(func() -> bool: return not lv.dying, DEATH_FRAMES), "reaparece desde el lector de folios")
 	hud.open_dialogue(["Sira|Prueba de diálogo"])
 	lv.request_restart()
 	check(not paused and not hud.dialog_visible, "la misma transición cierra un diálogo abierto")
@@ -935,6 +938,90 @@ func _t15_combat_fixes() -> void:
 	lv.route = "sur"
 	lv.combat = false
 	check(lv.route_label().contains("sin combate"), "ruta sur sin pelear: no dice «combate»")
+	await free_level(lv)
+
+
+func _t23_hook_combo() -> void:
+	print("23) Combo de gancho")
+	var lv := await new_level()
+	await through_door(lv)
+	var p := lv.player
+	var g := lv.guard
+	var model := p.rig as ModelRig
+	g.set_physics_process(false)
+	p.respawn_at(Vector3(3.0, 0.1, 6.5))
+	g.global_position = Vector3(4.5, 0.1, 6.5)
+	for i in 16:
+		p.do_hook()
+	await _frames(3)
+	check(model != null and model.current == "Sword_Slash" and p.combo_step == 1, "el primer golpe usa Sword_Slash")
+	check(is_equal_approx(lv.reserve, 98.0) and not p.combo_buffered,
+		"repetir antes del contacto cobra solo el primer golpe")
+	check(await until(func() -> bool: return g.hits == 1, 20), "el primer contacto alcanza al guardia")
+	check(is_equal_approx(g.damage_taken, 1.0) and is_equal_approx(p.combo_left, 0.5),
+		"el golpe normal hace 1 de daño y abre 0,5 s de encadenado")
+	g.global_position = Vector3(7.0, 0.1, 6.5)
+	p.do_hook()
+	p.do_hook()
+	check(p.combo_buffered and is_equal_approx(lv.reserve, 98.0), "solo se encola una pulsación y aún no se cobra")
+	check(await until(func() -> bool: return p.combo_step == 2, 60), "la pulsación encolada encadena el segundo golpe")
+	check(model != null and model.current == "Punch_Left" and is_equal_approx(lv.reserve, 96.0),
+		"el segundo golpe usa Punch_Left y cuesta 2 de reserva")
+	check(await until(func() -> bool: return p.combo_left > 0.0, 20) and g.hits == 1,
+		"el segundo golpe falla por distancia y permite continuar")
+	g.global_position = Vector3(4.5, 0.1, 6.5)
+	p.do_hook()
+	check(await until(func() -> bool: return p.combo_step == 3, 60), "se encadena el remate")
+	check(model != null and model.current == "Punch_Right" and is_equal_approx(lv.reserve, 94.0),
+		"el tercero usa Punch_Right y mantiene el coste de 2")
+	check(await until(func() -> bool: return g.state == Guard.S.DISARMED, 20)
+		and g.hits == 2 and is_equal_approx(g.damage_taken, 2.5),
+		"el remate hace 1,5 de daño y desarma al guardia si recibió un golpe")
+	await until(func() -> bool: return p.hook_cd <= 0.0, 60)
+	p.do_hook()
+	check(p.combo_step == 1, "después del tercero, el siguiente gancho empieza en el primer golpe")
+	await until(func() -> bool: return p.combo_left > 0.0, 20)
+	await _frames(33)
+	p.do_hook()
+	check(p.combo_step == 1, "una pulsación fuera de los 0,5 s abre otro combo")
+	await until(func() -> bool: return p.combo_left > 0.0, 20)
+	p.do_hook()
+	p.do_dodge()
+	check(p.combo_step == 0 and not p.combo_buffered and p.hit_pending < 0.0, "esquivar limpia el encadenado")
+	g.reset()
+	check(g.take_hit(true) and g.state == Guard.S.STUNNED and g.hits == 1 and is_equal_approx(g.damage_taken, 1.5),
+		"un remate aislado aturde a un guardia intacto y conserva su arma")
+	await free_level(lv)
+
+
+func _t24_death_animation() -> void:
+	print("24) Animación de muerte")
+	var lv := await new_level()
+	await through_door(lv)
+	var p := lv.player
+	var model := p.rig as ModelRig
+	p.do_hook()
+	await until(func() -> bool: return p.combo_left > 0.0, 20)
+	p.do_hook()
+	lv.spend(lv.reserve)
+	check(lv.dying and p.locked and p.death_animating and is_equal_approx(lv.death_t, 12.0)
+		and p.combo_step == 0 and not p.combo_buffered and p.hit_pending < 0.0,
+		"morir cancela el gancho y abre la animación de 12 s")
+	check(model != null and model.current == "Death" and lv.hud.fade_target == 0.0,
+		"el clip Death empieza con la cámara visible")
+	p.do_hook()
+	p.do_dodge()
+	check(p.swing_t == 0.0 and p.dodge_t == 0.0 and lv.reserve == 0.0, "mientras cae no responde a gancho ni esquiva")
+	await _frames(360)
+	check(lv.dying and model != null and model.current == "Death"
+		and absf(model.anim.current_animation_position / model.clip_length("Death") - 0.5) < 0.03
+		and lv.hud.fade_target == 0.0, "a los seis segundos el clip va por la mitad y se sigue viendo")
+	await _frames(340)
+	check(lv.dying and lv.hud.fade_target == 1.0, "la muerte sigue activa y el fundido empieza al final")
+	check(await until(func() -> bool: return not lv.dying, 24), "reaparece al completar los 12 s")
+	check(not p.death_animating and not p.locked and model != null and model.current == "Idle"
+		and p.global_position.distance_to(Level.CHECK_POS) < 0.2 and is_equal_approx(lv.reserve, Level.MAX_RESERVE),
+		"vuelve al punto de control en reposo con los controles y la reserva restaurados")
 	await free_level(lv)
 
 
