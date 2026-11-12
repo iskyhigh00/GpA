@@ -149,10 +149,7 @@ func open_dialogue(lines: Array[String]) -> void:
 	dialog_t = 0.0
 	dialog_visible = true
 	get_tree().paused = true
-	touches.clear()
-	stick_index = -1
-	move_vec = Vector2.ZERO
-	held.clear()
+	reset_touches()
 
 
 func advance_dialogue() -> void:
@@ -194,10 +191,7 @@ func open_docs(list: Array[Dictionary], page: int = 0) -> void:
 	doc_page = clampi(page, 0, list.size() - 1)
 	doc_visible = true
 	get_tree().paused = true
-	touches.clear()
-	stick_index = -1
-	move_vec = Vector2.ZERO
-	held.clear()
+	reset_touches()
 	docs_toggled.emit(true)
 
 
@@ -210,11 +204,36 @@ func close_docs() -> void:
 func set_settings(open: bool) -> void:
 	settings_visible = open
 	get_tree().paused = open
+	reset_touches()
+	settings_toggled.emit(open)
+
+
+func reset_touches() -> void:
 	touches.clear()
 	stick_index = -1
 	move_vec = Vector2.ZERO
 	held.clear()
-	settings_toggled.emit(open)
+
+
+func prepare_respawn(keep_restart_touch: bool) -> void:
+	var restart_touches: Array[int] = []
+	if keep_restart_touch:
+		for index: int in touches:
+			var touch: Dictionary = touches[index]
+			if touch["role"] == "btn" and touch["name"] == "restart":
+				restart_touches.append(index)
+	if dialog_visible:
+		close_dialogue()
+	if doc_visible:
+		close_docs()
+	if settings_visible:
+		set_settings(false)
+	else:
+		reset_touches()
+	for index in restart_touches:
+		touches[index] = {"role": "btn", "name": "restart"}
+	if not restart_touches.is_empty():
+		held["restart"] = restart_touches.size()
 
 
 func say(text: String, secs: float = 3.5) -> void:
@@ -278,6 +297,8 @@ func _hit_button(pos: Vector2) -> String:
 
 
 func _press(index: int, pos: Vector2) -> void:
+	if (level != null and level.dying) or touches.has(index):
+		return
 	if end_visible:
 		if play_again_rect().has_point(pos):
 			play_again_pressed.emit()

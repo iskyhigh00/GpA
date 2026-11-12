@@ -174,6 +174,17 @@ func add_shake(a: float) -> void:
 	shake = minf(0.5, maxf(shake, a))
 
 
+func lock_for_respawn() -> void:
+	locked = true
+	dodge_t = 0.0
+	invuln = 0.0
+	swing_t = 0.0
+	hit_pending = -1.0
+	velocity.x = 0.0
+	velocity.z = 0.0
+	touch_move = Vector2.ZERO
+
+
 func respawn_at(pos: Vector3) -> void:
 	global_position = pos
 	velocity = Vector3.ZERO
