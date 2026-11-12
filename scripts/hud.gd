@@ -21,11 +21,11 @@ signal cam_dragged(delta: Vector2)
 const STICK_RADIUS := 90.0
 const DEADZONE := 0.15
 const SAFE_MARGIN := 40.0
+const TEXT_OUTLINE := 6
+const RESTART_HOLD := 0.6
 const BAR_POS := Vector2(46.0, 104.0)
 const BAR_SIZE := Vector2(380.0, 26.0)
 const CONTROL_LABEL_SIZE := 20
-const TEXT_OUTLINE := 6
-const RESTART_HOLD := 0.6
 
 var level: Level
 var canvas: Control
