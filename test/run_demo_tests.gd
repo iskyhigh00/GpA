@@ -20,6 +20,7 @@ func _run() -> void:
 	await _t6_lamp_signal()
 	await _t7_lamp_detects()
 	await _t8_buttons()
+	await _t8_hud_icons()
 	await _t9_dodge()
 	await _t10_settings()
 	await _t11_models()
@@ -364,6 +365,41 @@ func _t8_buttons() -> void:
 		check(got[name] == 1, "botón %s emite su señal" % name)
 	check(lv.hud.stick_index == -1, "los botones no activan el stick")
 	await _frames(90)
+	await free_level(lv)
+
+
+func _t8_hud_icons() -> void:
+	print("8b) Iconos del HUD y áreas táctiles")
+	var lv := await new_level()
+	var hud := lv.hud
+	var vs := hud.view_size()
+	var expected := {
+		"hook": [Vector2(vs.x - 125.0, vs.y - 125.0), 66.0],
+		"dodge": [Vector2(vs.x - 270.0, vs.y - 70.0), 46.0],
+		"force": [Vector2(vs.x - 285.0, vs.y - 185.0), 46.0],
+		"action": [Vector2(vs.x - 190.0, vs.y - 285.0), 46.0],
+		"ampoule": [Vector2(vs.x - 75.0, vs.y - 285.0), 46.0],
+		"restart": [Vector2(vs.x - 44.0, 44.0), 26.0],
+		"settings": [Vector2(vs.x - 104.0, 44.0), 26.0],
+	}
+	var buttons := hud.buttons()
+	check(Hud.CONTROL_LABEL_SIZE == 20 and buttons.size() == expected.size(), "los siete botones mantienen etiquetas de 20 px")
+	for key: String in expected:
+		var center: Vector2 = expected[key][0]
+		var radius: float = expected[key][1]
+		var b: Dictionary = buttons[key]
+		var edge := Vector2.LEFT if key == "settings" else Vector2.RIGHT if key == "restart" else Vector2.DOWN
+		check(b["c"] == center and b["r"] == radius and hud._hit_button(center) == key
+			and hud._hit_button(center + edge * (radius + 11.0)) == key
+			and hud._hit_button(center + edge * (radius + 13.0)) != key,
+			"%s conserva centro, radio y margen táctil" % key)
+	# Pide un redibujado con todos los iconos y el gancho pulsado.
+	var draws := [0]
+	hud.canvas.draw.connect(func() -> void: draws[0] += 1, CONNECT_ONE_SHOT)
+	hud.held["hook"] = 1
+	hud.canvas.queue_redraw()
+	await _frames(4)
+	check(draws[0] == 1, "el canvas dibuja el HUD con los iconos y el estado pulsado")
 	await free_level(lv)
 
 
