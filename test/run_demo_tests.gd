@@ -34,6 +34,7 @@ func _run() -> void:
 	await _t21_static_batch()
 	await _t19_dialogue()
 	await _t20_docs_cap2()
+	await _t21_credits()
 	await _t15_combat_fixes()
 	await _frames(10)
 	print("\n%d comprobaciones, %d fallos" % [checks, fails])
@@ -850,7 +851,7 @@ func _t19_dialogue() -> void:
 
 func _t20_docs_cap2() -> void:
 	print("20) Folios del capítulo 2 y 3")
-	check(Docs.ALL.size() == 9, "hay 9 folios en total (%d)" % Docs.ALL.size())
+	check(Docs.ALL.size() == 10, "hay 9 folios y los créditos (%d)" % Docs.ALL.size())
 	for id in ["carta_ivo", "nota_elvira", "parte_roque", "circular"]:
 		check(Docs.get_docs([id]).size() == 1, "existe el folio «%s»" % id)
 	var carta := str(Docs.get_docs(["carta_ivo"])[0]["texto"])
@@ -931,3 +932,23 @@ func _batch_box(parent: Node3D, pos: Vector3, material: Material) -> MeshInstanc
 	instance.set_meta(StaticBatch.CPU_MESH, BoxMesh.new())
 	parent.add_child(instance)
 	return instance
+
+
+func _t21_credits() -> void:
+	print("21) Créditos")
+	var lv := await new_level()
+	check(Docs.get_docs(["creditos"]).size() == 1, "existe el documento de créditos")
+	var txt := str(Docs.get_docs(["creditos"])[0]["texto"])
+	for who in ["Poly Haven", "ambientCG", "Quaternius", "Katsukagi", "Pixor", "plaggy", "Freesound", "Godot"]:
+		check(txt.contains(who), "los créditos nombran a «%s»" % who)
+	touch(lv, 3, lv.hud.button_center("settings"), true)
+	touch(lv, 3, lv.hud.button_center("settings"), false)
+	var cr := lv.hud.settings_rect("credits").get_center()
+	touch(lv, 4, cr, true)
+	touch(lv, 4, cr, false)
+	check(lv.hud.doc_visible and not lv.hud.settings_visible and lv.hud.doc_list[0]["id"] == "creditos", "Ajustes → Créditos abre el lector con los créditos")
+	touch(lv, 5, lv.hud.doc_button("close").get_center(), true)
+	touch(lv, 5, lv.hud.doc_button("close").get_center(), false)
+	check(not lv.hud.doc_visible and not paused, "se cierra y reanuda el juego")
+	check(lv.hud.settings_rect("credits").end.x < lv.hud.settings_rect("close").position.x + 10.0, "los botones Créditos y Cerrar no se solapan")
+	await free_level(lv)

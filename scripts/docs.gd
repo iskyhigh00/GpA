@@ -135,6 +135,32 @@ El pontón 7 queda fuera de servicio. El cabo de freno se guarda en intendencia.
 
 Firma: Oficina de Intendencia.""",
 	},
+	{
+		"id": "creditos", "cap": 0,
+		"titulo": "CRÉDITOS Y LICENCIAS",
+		"texto": """EL TURNO DE LA SAL · Demo del capítulo 1
+
+TEXTURAS
+Poly Haven (CC0): rock_wall_08, stone_tiles, rusty_metal_sheet, weathered_planks, rough_plaster_broken, metal_plate, cobblestone_floor_001, rock_3, brick_wall_10, moss_wood.
+ambientCG (CC0): Metal 063.
+3dtextures.me, Katsukagi: Glass Frosted 003.
+
+MODELOS 3D
+Quaternius (CC0): personajes y ancla.
+Pixor Library, Frakassets: red de pesca.
+OpenGameArt, plaggy: gancho de carnicero.
+
+SONIDO
+Freesound: Anthousai, xkeril, johnfolker, speedygonzo, Sandwichbill y MootMcnoodles. Ambiente y efectos de la lonja: material propio.
+
+IMÁGENES
+Carteles, decales, conceptos de personajes y arte del título generados con IA.
+
+MOTOR
+Godot Engine, licencia MIT. https://godotengine.org
+
+Gracias por jugar.""",
+	},
 ]
 
 

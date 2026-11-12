@@ -125,7 +125,9 @@ func settings_rect(which: String) -> Rect2:
 		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 - 84.0, 400.0, 48.0)
 	if which == "browser":
 		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 82.0, 400.0, 44.0)
-	return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 134.0, 400.0, 44.0)
+	if which == "credits":
+		return Rect2(vs.x * 0.5 - 200.0, vs.y * 0.5 + 134.0, 195.0, 44.0)
+	return Rect2(vs.x * 0.5 + 5.0, vs.y * 0.5 + 134.0, 195.0, 44.0)
 
 
 const DIALOG_AUTO := 5.0
@@ -325,6 +327,9 @@ func _press(index: int, pos: Vector2) -> void:
 			quality_pressed.emit()
 		elif settings_rect("browser").has_point(pos):
 			browser_pressed.emit()
+		elif settings_rect("credits").has_point(pos):
+			set_settings(false)
+			open_docs(Docs.get_docs(["creditos"]))
 		elif settings_rect("close").has_point(pos) or not settings_panel().has_point(pos):
 			set_settings(false)
 		return
@@ -592,6 +597,10 @@ func _draw_settings(vs: Vector2) -> void:
 	canvas.draw_rect(c, Color(0.3, 0.3, 0.3, 0.9))
 	canvas.draw_rect(c, Color(1, 1, 1, 0.6), false, 2.0)
 	_text(Vector2(c.position.x, c.position.y + 31.0), "Cerrar", 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, c.size.x)
+	var cr := settings_rect("credits")
+	canvas.draw_rect(cr, Color(0.22, 0.26, 0.32, 0.9))
+	canvas.draw_rect(cr, Color(1, 1, 1, 0.6), false, 2.0)
+	_text(Vector2(cr.position.x, cr.position.y + 31.0), "Créditos", 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, cr.size.x)
 
 
 func _draw_doc(vs: Vector2) -> void:

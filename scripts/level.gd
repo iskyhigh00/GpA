@@ -1188,6 +1188,7 @@ func finish() -> void:
 		"Ruta tomada: " + route_label(),
 		"Combate: " + ("sí" if combat else "no"),
 		"Tiempo: %d:%02d" % [secs / 60, secs % 60],
+		"Continúa en el capítulo 2.",
 	]
 	hud.show_end(lines)
 	hud.objective = ""

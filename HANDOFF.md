@@ -76,6 +76,11 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - PR #3: robustez del HUD y la reaparición (toques duplicados, morir/reiniciar cierra paneles y cancela esquiva y golpes, el carro se detiene hasta restablecer). Falta verificar la cancelación de toques en un Android real.
 - `Gfx.capture_static_meshes` guarda mallas en memoria solo para pruebas headless. Aviso de importación de LOD en `gancho_carnicero.gltf` (inofensivo, también en `main`).
 
+## Créditos, tienda y textos de interfaz (de DeepSeek, revisados)
+- `docs.gd`: documento `creditos` (autores y licencias de lo usado). Botón «Créditos» en ⚙ Ajustes, junto a «Cerrar», que abre el lector. Pantalla final con «Continúa en el capítulo 2.».
+- `docs/tienda.md`: textos de tienda dentro de límites (título 19, subtítulo 28, corta 73 caracteres). Antes de publicar: licencias «sin verificar» (`docs/licencias.md`) y política de privacidad (permiso de Internet).
+- `docs/textos_interfaz.md`: qué se aprovechó y qué se descartó de la lista de objetivos, avisos y muertes.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.
