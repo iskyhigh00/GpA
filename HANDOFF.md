@@ -115,6 +115,10 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - No viables en Compatibility según la documentación: Decals, niebla volumétrica, FXAA/TAA. LightmapGI se renderiza en Compatibility pero solo se hornea desde el editor (sin línea de comandos documentada).
 - Pendiente probado en teoría: ReflectionProbe sobre la lonja (máx. 2 por malla en Compatibility), mallas translúcidas como haces de luz (ya hay en los vitrales).
 
+## Atmósfera por zona (PR #10 de ChatGPT, fusionado)
+- `scripts/port_atmosphere.gd`: vapor en tuberías, goteras con salpicadura y sonido posicional, polvo en los haces de vitral y luz y niebla distintas por zona (consultorio cálido, lonja fría, patio verdoso). Calidad Baja lo apaga; las sombras de contacto siguen. 398 comprobaciones.
+- La tanda de utilería 3D, arquitectura modular y personajes Tesa/Ivo/Roque no llegó (el chat de ChatGPT falló): se relanza en un chat nuevo.
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.
