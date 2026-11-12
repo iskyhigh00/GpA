@@ -483,12 +483,10 @@ func _draw_controls(_vs: Vector2) -> void:
 		canvas.draw_arc(c, r, 0.0, TAU, 40, Color(1, 1, 1, 0.8 if down else 0.5), 3.0)
 		var compact := r < 30.0
 		_draw_button_icon(key, c if compact else c - Vector2(0, r * 0.2), clampf(r / 46.0, 0.68, 1.25))
-		var text_width := r * 2.0
-		var baseline := c.y + r * 0.58
 		if compact:
-			label = "Volver" if key == "restart" else "Ajustes"
-			text_width = 60.0
-			baseline = c.y + r + CONTROL_LABEL_SIZE
+			continue
+		var text_width := maxf(r * 2.0, 130.0)
+		var baseline := c.y + r * 0.58
 		_text(Vector2(c.x - text_width * 0.5, baseline), label, CONTROL_LABEL_SIZE,
 			Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, text_width)
 

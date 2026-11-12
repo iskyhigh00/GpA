@@ -70,6 +70,12 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - `scripts/docs.gd`: 4 folios nuevos (`carta_ivo` y `circular` para el cap. 2; `nota_elvira` y `parte_roque` para el cap. 3). Aún sin lector fuera de la mesa del consultorio.
 - `docs/capitulo_2.md`: reglas del puzle espacial, tres cruces, fallos y diálogo (orden corregido: Sira lee la placa y luego Ivo cuenta lo de su madre). `docs/plan_de_pruebas.md`: 20 comprobaciones con los controles reales.
 
+## Pull requests de ChatGPT (fusionados)
+- PR #1 `scripts/static_batch.gd`: fusiona las mallas estáticas de la lonja por zonas de 8 m y material. Escenario de 281 a 75 `MeshInstance3D`; el nivel completo con actores, de 341 a 135. Mantiene colisiones y los muros que se vuelven translúcidos. Falta medir draw calls, FPS y temperatura en el Samsung.
+- PR #2: iconos vectoriales en los botones del HUD (`_draw_button_icon`). Ajustado después: etiqueta ancha (mín. 130 px) para que no se corte y sin texto en los botones pequeños ⚙ y ↻.
+- PR #3: robustez del HUD y la reaparición (toques duplicados, morir/reiniciar cierra paneles y cancela esquiva y golpes, el carro se detiene hasta restablecer). Falta verificar la cancelación de toques en un Android real.
+- `Gfx.capture_static_meshes` guarda mallas en memoria solo para pruebas headless. Aviso de importación de LOD en `gancho_carnicero.gltf` (inofensivo, también en `main`).
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.
