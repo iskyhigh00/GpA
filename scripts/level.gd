@@ -12,6 +12,8 @@ const MAX_RESERVE := 100.0
 const FORCE_COST := 35.0
 const AMPOULE_GAIN := 50.0
 const HOOK_COST := 2.0
+const DEATH_DURATION := 12.0
+const DEATH_FADE_TIME := 0.4
 const CAM_GOAL := 1.5
 const DESK_POS := Vector3(-13.5, 0.0, 2.8)
 const KIT_POS := Vector3(16.5, 0.0, -3.5)
@@ -988,11 +990,11 @@ func hurt_player(dmg: float) -> void:
 	spend(dmg)
 
 
-func on_guard_hit(_hits: int, pos: Vector3) -> void:
+func on_guard_hit(pos: Vector3, finisher: bool) -> void:
 	combat = true
 	play("hook_hit")
 	hitstop_t = 0.1
-	player.add_shake(0.3)
+	player.add_shake(0.42 if finisher else 0.3)
 	spark(pos)
 
 
@@ -1123,7 +1125,9 @@ func request_restart() -> void:
 func die() -> void:
 	if dying or done:
 		return
-	_begin_respawn(1.0)
+	_begin_respawn(DEATH_DURATION)
+	player.pose_death(0.0)
+	hud.fade_target = 0.0
 	hud.flash = 1.0
 	play("body_fall")
 	hud.say("Sin reserva. Vuelves al punto de control.", 2.5)
@@ -1317,8 +1321,12 @@ func _physics_process(delta: float) -> void:
 	elif door_open and door_body.visible:
 		door_body.visible = false
 	if dying:
-		death_t -= delta
-		if death_t <= 0.0:
+		death_t = maxf(0.0, death_t - delta)
+		if player.death_animating:
+			player.pose_death(1.0 - death_t / DEATH_DURATION)
+			if death_t <= DEATH_FADE_TIME:
+				hud.fade_target = 1.0
+		if is_zero_approx(death_t):
 			_respawn()
 	if tutorial_step == 1:
 		hud.obj_ratio = cam_progress

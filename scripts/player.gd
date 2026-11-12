@@ -9,6 +9,8 @@ const HOOK_RANGE := 2.3
 const HOOK_COOLDOWN := 0.55
 const SWING_TIME := 0.42
 const HIT_DELAY := 0.13
+const COMBO_WINDOW := 0.5
+const HOOK_CLIPS: Array[String] = ["Sword_Slash", "Punch_Left", "Punch_Right"]
 const DODGE_TIME := 0.3
 const DODGE_SPEED := 10.5
 const DODGE_COOLDOWN := 0.9
@@ -32,6 +34,9 @@ var hook_cd := 0.0
 var hurt_cd := 0.0
 var swing_t := 0.0
 var hit_pending := -1.0
+var combo_step := 0
+var combo_left := 0.0
+var combo_buffered := false
 var faded: Array[MeshInstance3D] = []
 var dodge_t := 0.0
 var dodge_cd := 0.0
@@ -39,6 +44,7 @@ var invuln := 0.0
 var dodge_dir := Vector3.ZERO
 var shake := 0.0
 var locked := false
+var death_animating := false
 var body_pivot: Node3D
 var roll_node: Node3D
 var rig: Rig
@@ -180,9 +186,22 @@ func lock_for_respawn() -> void:
 	invuln = 0.0
 	swing_t = 0.0
 	hit_pending = -1.0
+	_clear_combo()
 	velocity.x = 0.0
 	velocity.z = 0.0
 	touch_move = Vector2.ZERO
+
+
+func pose_death(progress: float) -> void:
+	death_animating = true
+	roll_node.rotation.x = 0.0
+	var model_rig := rig as ModelRig
+	if model_rig != null and model_rig.clip_length("Death") > 0.0:
+		rig.scrub("Death", progress)
+	else:
+		var fall := smoothstep(0.0, 1.0, progress)
+		roll_node.rotation.z = fall * PI * 0.5
+		roll_node.position.y = lerpf(0.9, 0.32, fall)
 
 
 func respawn_at(pos: Vector3) -> void:
@@ -196,6 +215,12 @@ func respawn_at(pos: Vector3) -> void:
 	invuln = 0.0
 	swing_t = 0.0
 	hit_pending = -1.0
+	_clear_combo()
+	if death_animating:
+		death_animating = false
+		roll_node.rotation = Vector3.ZERO
+		roll_node.position.y = 0.9
+		rig.reset_pose()
 	cam_focus = pos + Vector3(0.0, CAM_HEIGHT, 0.0)
 
 
@@ -210,8 +235,21 @@ func _move_dir() -> Vector3:
 
 
 func do_hook() -> void:
-	if locked or hook_cd > 0.0 or dodge_t > 0.0:
+	if locked or dodge_t > 0.0:
 		return
+	if combo_left > 0.0:
+		if hook_cd > 0.0:
+			combo_buffered = true
+		else:
+			_start_hook(combo_step + 1)
+	elif hook_cd <= 0.0:
+		_start_hook(1)
+
+
+func _start_hook(step: int) -> void:
+	combo_step = step
+	combo_left = 0.0
+	combo_buffered = false
 	hook_cd = HOOK_COOLDOWN
 	swing_t = SWING_TIME
 	hit_pending = HIT_DELAY
@@ -225,15 +263,22 @@ func do_hook() -> void:
 		facing = atan2(-to.x, -to.z)
 
 
+func _clear_combo() -> void:
+	combo_step = 0
+	combo_left = 0.0
+	combo_buffered = false
+
+
 ## El daño llega en el frame de contacto del golpe, no al pulsar.
-func _resolve_hit() -> void:
+func _resolve_hit() -> bool:
 	var g := level.guard
 	if not g.can_be_hit():
-		return
+		return true
 	var to := g.global_position - global_position
 	to.y = 0.0
 	if to.length() <= HOOK_RANGE and level.clear_line(global_position, g.global_position):
-		g.take_hit()
+		return g.take_hit(combo_step == HOOK_CLIPS.size())
+	return true
 
 
 func do_dodge() -> void:
@@ -249,6 +294,7 @@ func do_dodge() -> void:
 	invuln = DODGE_INVULN
 	swing_t = 0.0
 	hit_pending = -1.0
+	_clear_combo()
 	level.play("dodge")
 
 
@@ -258,10 +304,19 @@ func _physics_process(delta: float) -> void:
 	hook_cd = maxf(0.0, hook_cd - delta)
 	hurt_cd = maxf(0.0, hurt_cd - delta)
 	swing_t = maxf(0.0, swing_t - delta)
+	combo_left = maxf(0.0, combo_left - delta)
 	if hit_pending > 0.0:
 		hit_pending -= delta
 		if hit_pending <= 0.0:
-			_resolve_hit()
+			var can_chain := _resolve_hit()
+			if can_chain and combo_step < HOOK_CLIPS.size():
+				# Una pulsación tras el contacto puede esperar a que termine la recuperación.
+				combo_left = COMBO_WINDOW
+	if combo_buffered:
+		if combo_left <= 0.0:
+			combo_buffered = false
+		elif hook_cd <= 0.0:
+			_start_hook(combo_step + 1)
 	dodge_cd = maxf(0.0, dodge_cd - delta)
 	invuln = maxf(0.0, invuln - delta)
 	cam_manual_t = maxf(0.0, cam_manual_t - delta)
@@ -287,6 +342,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _animate(delta: float) -> void:
+	if death_animating:
+		return
 	var hs := Vector2(velocity.x, velocity.z).length()
 	if rig.is_model:
 		_animate_model(delta, hs)
@@ -312,7 +369,9 @@ func _animate_model(delta: float, hs: float) -> void:
 	if dodge_t > 0.0:
 		rig.scrub("Roll", 1.0 - dodge_t / DODGE_TIME)
 	elif swing_t > 0.0:
-		rig.scrub("Sword_Slash", lerpf(0.15, 0.75, 1.0 - swing_t / SWING_TIME))
+		var u := 1.0 - swing_t / SWING_TIME
+		var clip := HOOK_CLIPS[combo_step - 1]
+		rig.scrub(clip, lerpf(0.15, 0.75, u) if combo_step == 1 else lerpf(0.18, 0.92, u))
 	else:
 		rig.locomotion(delta, hs, SPEED)
 		if rig.step_flag and is_on_floor():
@@ -333,7 +392,8 @@ static func _fade_material() -> StandardMaterial3D:
 
 
 func _process(delta: float) -> void:
-	var target := global_position + Vector3(0.0, CAM_HEIGHT, 0.0) + cam_right() * CAM_SHOULDER
+	var height := lerpf(CAM_HEIGHT, 0.65, 1.0 - level.death_t / Level.DEATH_DURATION) if death_animating else CAM_HEIGHT
+	var target := global_position + Vector3(0.0, height, 0.0) + cam_right() * CAM_SHOULDER
 	cam_focus = cam_focus.lerp(target, 1.0 - exp(-14.0 * delta))
 	var focus := cam_focus
 	var off := Vector3(sin(cam_yaw) * cos(cam_pitch), sin(cam_pitch), cos(cam_yaw) * cos(cam_pitch))

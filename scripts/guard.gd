@@ -17,6 +17,8 @@ const CHASE_SPEED := 3.8
 const JAB_DAMAGE := 12.0
 const SLAM_DAMAGE := 22.0
 const SLAM_RADIUS := 2.7
+const DISARM_DAMAGE := 2.0
+const FINISHER_DAMAGE := 1.5
 const GRAVITY := 24.0
 const CONE_SEGS := 12
 const HOME := Vector3(8.0, 0.1, 6.5)
@@ -25,6 +27,7 @@ const PATROL_PTS: Array[Vector3] = [Vector3(6.0, 0.1, 6.5), Vector3(12.5, 0.1, 6
 var level: Level
 var state: S = S.PATROL
 var hits := 0
+var damage_taken := 0.0
 var alert_count := 0
 var chasing_session := false
 var detect := 0.0
@@ -117,6 +120,7 @@ func _ready() -> void:
 func reset() -> void:
 	state = S.PATROL
 	hits = 0
+	damage_taken = 0.0
 	alert_count = 0
 	attack_seq = 0
 	swings_seen = 0
@@ -145,7 +149,7 @@ func can_be_hit() -> bool:
 	return state != S.DISARMED and state != S.STANDDOWN
 
 
-func take_hit() -> bool:
+func take_hit(finisher: bool = false) -> bool:
 	if not can_be_hit():
 		return false
 	swings_seen += 1
@@ -157,13 +161,14 @@ func take_hit() -> bool:
 		level.player.hook_cd += 0.45
 		return false
 	hits += 1
+	damage_taken += FINISHER_DAMAGE if finisher else 1.0
 	hit_taken.emit(hits)
-	level.on_guard_hit(hits, global_position + Vector3(0.0, 1.3, 0.0))
+	level.on_guard_hit(global_position + Vector3(0.0, 1.3, 0.0), finisher)
 	ring.visible = false
 	baton_mat.emission_energy_multiplier = 0.2
 	if away.length() > 0.05:
-		knock = -away.normalized() * 5.0
-	if hits >= 2:
+		knock = -away.normalized() * (6.5 if finisher else 5.0)
+	if damage_taken >= DISARM_DAMAGE:
 		level.bark("derrota")
 		state = S.DISARMED
 		velocity = Vector3.ZERO
