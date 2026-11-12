@@ -82,6 +82,7 @@ var bark_i: Dictionary = {}
 var last_bark := ""
 var posters := 0
 var models_placed := 0
+var static_mesh_counts := Vector2i.ZERO
 var decals := 0
 var updater: Updater
 
@@ -134,7 +135,12 @@ func _ready() -> void:
 	_build_environment()
 	Quality.load_saved()
 	Quality.apply(get_viewport(), quality_env)
+	Gfx.capture_static_meshes = Gfx.headless
 	_build_world()
+	Gfx.capture_static_meshes = false
+	var moving: Array[Node3D] = [door_body, grate_plate]
+	moving.append_array(kit_cross)
+	static_mesh_counts = StaticBatch.build(self, moving)
 	_build_entities()
 	_build_hud()
 	_set_objective()

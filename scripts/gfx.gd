@@ -6,6 +6,17 @@ extends RefCounted
 static var headless: bool = DisplayServer.get_name() == "headless"
 
 
+## Conserva la geometría de la lonja para probar el lote sin asignar mallas al renderer dummy.
+static var capture_static_meshes := false
+
+
+static func _put_mesh(instance: MeshInstance3D, mesh: Mesh) -> void:
+	if not headless:
+		instance.mesh = mesh
+	elif capture_static_meshes:
+		instance.set_meta(StaticBatch.CPU_MESH, mesh)
+
+
 static func mat(c: Color, rough: float = 0.9, emit: float = 0.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = c
@@ -21,8 +32,7 @@ static func box_mesh(size: Vector3, c: Color, emit: float = 0.0) -> MeshInstance
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = size
-	if not headless:
-		mi.mesh = bm
+	_put_mesh(mi, bm)
 	mi.material_override = mat(c, 0.9, emit)
 	return mi
 
@@ -32,8 +42,7 @@ static func capsule_mesh(r: float, h: float, c: Color) -> MeshInstance3D:
 	var cm := CapsuleMesh.new()
 	cm.radius = r
 	cm.height = h
-	if not headless:
-		mi.mesh = cm
+	_put_mesh(mi, cm)
 	mi.material_override = mat(c)
 	return mi
 
@@ -43,8 +52,7 @@ static func sphere_mesh(r: float, c: Color) -> MeshInstance3D:
 	var sm := SphereMesh.new()
 	sm.radius = r
 	sm.height = r * 2.0
-	if not headless:
-		mi.mesh = sm
+	_put_mesh(mi, sm)
 	mi.material_override = mat(c)
 	return mi
 
@@ -55,8 +63,7 @@ static func cyl_mesh(r: float, h: float, c: Color, emit: float = 0.0) -> MeshIns
 	cm.top_radius = r
 	cm.bottom_radius = r
 	cm.height = h
-	if not headless:
-		mi.mesh = cm
+	_put_mesh(mi, cm)
 	mi.material_override = mat(c, 0.5, emit)
 	return mi
 
@@ -89,8 +96,7 @@ static func disc(r: float, c: Color) -> MeshInstance3D:
 	cm.top_radius = r
 	cm.bottom_radius = r
 	cm.height = 0.02
-	if not headless:
-		mi.mesh = cm
+	_put_mesh(mi, cm)
 	mi.material_override = glow_mat(c)
 	return mi
 
@@ -100,8 +106,7 @@ static func beam(c: Color) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = Vector3.ONE
-	if not headless:
-		mi.mesh = bm
+	_put_mesh(mi, bm)
 	mi.material_override = glow_mat(c)
 	return mi
 
@@ -314,8 +319,7 @@ static func box_m(size: Vector3, m: Material) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = size
-	if not headless:
-		mi.mesh = bm
+	_put_mesh(mi, bm)
 	mi.material_override = m
 	return mi
 
@@ -327,8 +331,7 @@ static func cyl_m(r: float, h: float, m: Material, r_bottom: float = -1.0) -> Me
 	cm.bottom_radius = r if r_bottom < 0.0 else r_bottom
 	cm.height = h
 	cm.radial_segments = 12
-	if not headless:
-		mi.mesh = cm
+	_put_mesh(mi, cm)
 	mi.material_override = m
 	return mi
 
@@ -340,8 +343,7 @@ static func capsule_m(r: float, h: float, m: Material) -> MeshInstance3D:
 	cm.height = h
 	cm.radial_segments = 12
 	cm.rings = 4
-	if not headless:
-		mi.mesh = cm
+	_put_mesh(mi, cm)
 	mi.material_override = m
 	return mi
 
@@ -353,8 +355,7 @@ static func sphere_m(r: float, m: Material) -> MeshInstance3D:
 	sm.height = r * 2.0
 	sm.radial_segments = 14
 	sm.rings = 7
-	if not headless:
-		mi.mesh = sm
+	_put_mesh(mi, sm)
 	mi.material_override = m
 	return mi
 
@@ -384,8 +385,7 @@ static func torus_m(inner: float, outer: float, m: Material) -> MeshInstance3D:
 	tm.outer_radius = outer
 	tm.rings = 16
 	tm.ring_segments = 8
-	if not headless:
-		mi.mesh = tm
+	_put_mesh(mi, tm)
 	mi.material_override = m
 	return mi
 
@@ -394,8 +394,7 @@ static func quad_m(size: Vector2, m: Material) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var qm := QuadMesh.new()
 	qm.size = size
-	if not headless:
-		mi.mesh = qm
+	_put_mesh(mi, qm)
 	mi.material_override = m
 	no_shadow(mi)
 	return mi

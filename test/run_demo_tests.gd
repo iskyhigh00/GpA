@@ -29,6 +29,7 @@ func _run() -> void:
 	await _t16_decor()
 	await _t17_barks()
 	await _t18_models()
+	await _t21_static_batch()
 	await _t19_dialogue()
 	await _t20_docs_cap2()
 	await _t15_combat_fixes()
@@ -707,3 +708,75 @@ func _t20_docs_cap2() -> void:
 	check(elvira.contains("13/11/2026, 22:50") and not elvira.contains("ampolla"), "la nota de Elvira es del 13/11 22:50 y no habla de ampollas")
 	var circ := str(Docs.get_docs(["circular"])[0]["texto"])
 	check(circ.contains("14/11/2026, 01:00"), "la circular de Intendencia es posterior a la orden de inundación (13/11 23:40)")
+
+
+func _t21_static_batch() -> void:
+	print("21) Lotes de geometría estática")
+	var lv := await new_level()
+	check(lv.static_mesh_counts.x > lv.static_mesh_counts.y and lv.static_mesh_counts.y < 80,
+		"mallas del escenario: %d → %d (objetivo <80)" % [lv.static_mesh_counts.x, lv.static_mesh_counts.y])
+	check(lv.door_body.get_child(1) is MeshInstance3D and lv.grate_plate.get_child(1) is MeshInstance3D,
+		"puerta y rejilla conservan sus mallas independientes")
+	check(lv.kit_cross.size() == 2 and is_instance_valid(lv.kit_cross[0]) and is_instance_valid(lv.kit_cross[1]),
+		"las piezas interactivas del botiquín conservan sus referencias")
+	await free_level(lv)
+
+	var world := Node3D.new()
+	root.add_child(world)
+	var stone := Gfx.mat(Color.WHITE)
+	var wood := Gfx.mat(Color.BROWN)
+	var pane := Gfx.mat(Color(0.3, 0.5, 0.6, 0.3))
+	pane.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_batch_box(world, Vector3(0, 0, 0), stone)
+	_batch_box(world, Vector3(2, 0, 0), stone)
+	_batch_box(world, Vector3(3, 0, 0), wood)
+	_batch_box(world, Vector3(4, 0, 0), stone)
+	_batch_box(world, Vector3(5, 0, 0), stone)
+	var glass := _batch_box(world, Vector3(1, 0, 0), pane)
+	var wall := StaticBody3D.new()
+	wall.position.y = 1.0
+	world.add_child(wall)
+	var wall_mesh := _batch_box(wall, Vector3.ZERO, stone)
+	var shape := CollisionShape3D.new()
+	shape.shape = BoxShape3D.new()
+	wall.add_child(shape)
+	var counts := StaticBatch.build(world, [])
+	check(counts == Vector2i(7, 4), "agrupar respeta la frontera de 8 m y conserva los objetos excluidos")
+	check(is_instance_valid(glass) and glass.get_parent() == world, "la malla transparente conserva su orden de dibujo")
+	check(is_instance_valid(wall_mesh) and wall_mesh.get_parent() == wall and shape.get_parent() == wall,
+		"la colisión y la malla que desvanece la cámara siguen en el mismo cuerpo")
+	var zone_materials: Array[int] = []
+	for child in world.get_children():
+		if child is MeshInstance3D and child != glass:
+			var mesh := StaticBatch.mesh_of(child as MeshInstance3D)
+			zone_materials.append(mesh.get_surface_count())
+	zone_materials.sort()
+	check(zone_materials == [1, 2], "materiales iguales comparten superficie y materiales distintos se mantienen separados")
+	world.free()
+
+	var data: Array = []
+	data.resize(Mesh.ARRAY_MAX)
+	var normal := Vector3(1, 0, 1).normalized()
+	var tangent := Vector3(1, 0, -1).normalized()
+	data[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3.ZERO, Vector3.UP, tangent])
+	data[Mesh.ARRAY_NORMAL] = PackedVector3Array([normal, normal, normal])
+	data[Mesh.ARRAY_TANGENT] = PackedFloat32Array([
+		tangent.x, tangent.y, tangent.z, 1.0, tangent.x, tangent.y, tangent.z, 1.0, tangent.x, tangent.y, tangent.z, 1.0])
+	data[Mesh.ARRAY_TEX_UV] = PackedVector2Array([Vector2.ZERO, Vector2.DOWN, Vector2.RIGHT])
+	var xf := Transform3D(Basis.from_scale(Vector3(-2.0, 0.7, 1.5)), Vector3(1, 2, 3))
+	var surface := StaticBatch.Surface.new()
+	surface.append(data, xf)
+	check(surface.vertices[2].is_equal_approx(xf * tangent) and surface.uv == data[Mesh.ARRAY_TEX_UV],
+		"el lote transforma los vértices y conserva las UV")
+	check(surface.normals[0].is_equal_approx((xf.basis.inverse().transposed() * normal).normalized())
+		and surface.tangents[3] == -1.0 and surface.indices == PackedInt32Array([0, 2, 1]),
+		"una escala no uniforme reflejada conserva normales, tangentes y cara visible")
+
+
+func _batch_box(parent: Node3D, pos: Vector3, material: Material) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.position = pos
+	instance.material_override = material
+	instance.set_meta(StaticBatch.CPU_MESH, BoxMesh.new())
+	parent.add_child(instance)
+	return instance
