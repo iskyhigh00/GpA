@@ -22,6 +22,7 @@ const STICK_RADIUS := 90.0
 const DEADZONE := 0.15
 const BAR_POS := Vector2(24.0, 44.0)
 const BAR_SIZE := Vector2(380.0, 26.0)
+const CONTROL_LABEL_SIZE := 20
 
 var level: Level
 var canvas: Control
@@ -459,8 +460,73 @@ func _draw_controls(_vs: Vector2) -> void:
 			base = Color(0.3, 0.3, 0.3)
 		canvas.draw_circle(c, r, Color(base, 0.75 if down else 0.4))
 		canvas.draw_arc(c, r, 0.0, TAU, 40, Color(1, 1, 1, 0.8 if down else 0.5), 3.0)
-		var fs := 26 if key == "restart" else (22 if key == "hook" else 16)
-		_text(Vector2(c.x - r, c.y + fs * 0.35), label, fs, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, r * 2.0)
+		var compact := r < 30.0
+		_draw_button_icon(key, c if compact else c - Vector2(0, r * 0.2), clampf(r / 46.0, 0.68, 1.25))
+		var text_width := r * 2.0
+		var baseline := c.y + r * 0.58
+		if compact:
+			label = "Volver" if key == "restart" else "Ajustes"
+			text_width = 60.0
+			baseline = c.y + r + CONTROL_LABEL_SIZE
+		_text(Vector2(c.x - text_width * 0.5, baseline), label, CONTROL_LABEL_SIZE,
+			Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, text_width)
+
+
+func _icon_path(points: PackedVector2Array, color: Color, width: float = 2.8) -> void:
+	for i in range(1, points.size()):
+		canvas.draw_line(points[i - 1], points[i], color, width, true)
+
+
+func _draw_button_icon(key: String, center: Vector2, scale: float) -> void:
+	var ink := Color(0.97, 0.96, 0.9)
+	var red := Color(0.95, 0.32, 0.36)
+	canvas.draw_set_transform(center, 0.0, Vector2.ONE * scale)
+	match key:
+		"hook":
+			canvas.draw_line(Vector2(7, -12), Vector2(5, 4), ink, 3.6, true)
+			canvas.draw_arc(Vector2(-3, 4), 8, 0.0, PI, 20, ink, 3.6, true)
+			canvas.draw_line(Vector2(-11, 4), Vector2(-9, 0), ink, 3.0, true)
+			canvas.draw_colored_polygon(PackedVector2Array([
+				Vector2(4, -9), Vector2(5, -16), Vector2(12, -15), Vector2(10, -8)]), ink)
+		"dodge":
+			canvas.draw_arc(Vector2(6, -6), 3.5, 0, TAU, 16, ink, 2.8, true)
+			_icon_path([Vector2(12, 5), Vector2(3, 0), Vector2(-2, 4), Vector2(-8, -1),
+				Vector2(-11, 6), Vector2(-16, 6)], ink, 3.0)
+			canvas.draw_arc(Vector2.ZERO, 15, 0.12, 2.9, 20, ink, 2.4, true)
+		"force":
+			canvas.draw_colored_polygon(PackedVector2Array([
+				Vector2(-10, 6), Vector2(-13, 0), Vector2(-13, -6), Vector2(-9, -9),
+				Vector2(-6, -8), Vector2(-4, -11), Vector2(0, -11), Vector2(2, -9),
+				Vector2(5, -10), Vector2(9, -8), Vector2(12, -5), Vector2(12, 1),
+				Vector2(7, 8), Vector2(7, 12), Vector2(-6, 12), Vector2(-6, 8)]), ink)
+			canvas.draw_line(Vector2(-9, -2), Vector2(5, -2), Color(0.3, 0.2, 0.21), 1.5, true)
+			canvas.draw_colored_polygon(PackedVector2Array([
+				Vector2(13, -14), Vector2(18, -14), Vector2(15, -9), Vector2(19, -9),
+				Vector2(12, -3), Vector2(14, -8), Vector2(10, -8)]), red)
+		"action":
+			canvas.draw_colored_polygon(PackedVector2Array([
+				Vector2(-6, 13), Vector2(-6, 8), Vector2(-14, 0), Vector2(-13, -3), Vector2(-9, -2),
+				Vector2(-6, 1), Vector2(-8, -10), Vector2(-7, -12), Vector2(-4, -12), Vector2(-2, -4),
+				Vector2(-2, -15), Vector2(1, -16), Vector2(3, -14), Vector2(3, -4),
+				Vector2(5, -13), Vector2(8, -13), Vector2(9, -11), Vector2(7, -2),
+				Vector2(10, -8), Vector2(13, -7), Vector2(13, -4), Vector2(10, 5),
+				Vector2(7, 9), Vector2(7, 13)]), ink)
+		"ampoule":
+			canvas.draw_colored_polygon(PackedVector2Array([
+				Vector2(-5, 2), Vector2(5, 2), Vector2(5, 12), Vector2(-5, 12)]), red)
+			_icon_path([Vector2(-3, -15), Vector2(3, -15), Vector2(3, -7), Vector2(7, -2),
+				Vector2(7, 11), Vector2(5, 14), Vector2(-5, 14), Vector2(-7, 11),
+				Vector2(-7, -2), Vector2(-3, -7), Vector2(-3, -15)], ink, 2.5)
+		"restart":
+			canvas.draw_arc(Vector2.ZERO, 13, -0.4, 4.9, 28, ink, 3.4, true)
+			canvas.draw_colored_polygon(PackedVector2Array([
+				Vector2(14, -9), Vector2(15, 1), Vector2(5, -2)]), ink)
+		"settings":
+			canvas.draw_arc(Vector2.ZERO, 10.0, 0.0, TAU, 24, ink, 3.3, true)
+			for i in 8:
+				var dir := Vector2.from_angle(i * TAU / 8.0)
+				canvas.draw_line(dir * 10.0, dir * 15.0, ink, 3.2, true)
+	canvas.draw_set_transform(Vector2.ZERO)
 
 
 func _draw_end(vs: Vector2) -> void:
