@@ -198,6 +198,15 @@ func _build_environment() -> void:
 	env.adjustment_enabled = true
 	env.adjustment_contrast = 1.12
 	env.adjustment_saturation = 0.88
+	var sky_path := "res://assets/arte/cielo_equirect.jpg"
+	if ResourceLoader.exists(sky_path):
+		var pm := PanoramaSkyMaterial.new()
+		pm.panorama = load(sky_path) as Texture2D
+		var sky := Sky.new()
+		sky.sky_material = pm
+		sky.radiance_size = Sky.RADIANCE_SIZE_128
+		env.sky = sky
+		env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	quality_env = env
 	var we := WorldEnvironment.new()
 	we.environment = env

@@ -110,6 +110,11 @@ Resultado actual: 114 comprobaciones, 0 fallos. En la sesión anterior Godot est
 - En headless se quitan las mallas importadas (`Gfx.strip_meshes`), porque el renderizador dummy da error.
 - Pendiente: ajustar los puntos de montaje en un teléfono, caras y manos (siguen simples), Tesa, Ivo y Roque.
 
+## Investigación de Kimi aprovechada (verificada contra la documentación)
+- Reflejos: `assets/arte/cielo_equirect.jpg` (equirectangular compuesto desde el panorama) como `Environment.sky` con `reflected_light_source = SKY`, para que metales y suelo mojado reflejen algo (sin esto, el metal sale negro en Compatibility). Probada la niebla por altura (`fog_height`): oscurecía el suelo sin aportar, descartada.
+- No viables en Compatibility según la documentación: Decals, niebla volumétrica, FXAA/TAA. LightmapGI se renderiza en Compatibility pero solo se hornea desde el editor (sin línea de comandos documentada).
+- Pendiente probado en teoría: ReflectionProbe sobre la lonja (máx. 2 por malla en Compatibility), mallas translúcidas como haces de luz (ya hay en los vitrales).
+
 ## Pendiente
 1. Probar en el celu si bajó el calor. Si no, 30 FPS o escala 0.6.
 2. Capítulos 2 y 3: usar `lonja.jpg`, los modelos Tesa/Ivo/Roque y los documentos informe/censo/partes.
